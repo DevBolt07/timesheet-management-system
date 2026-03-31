@@ -16,6 +16,14 @@ class TimesheetService {
     }
 
     def createTimesheet(Map data, User user, TaskType taskType) {
+        if (!data.date) throw new IllegalArgumentException("Operational date is required")
+        if (!data.startTime || !data.endTime) throw new IllegalArgumentException("Start and end times are required")
+        if (!data.description?.trim()) throw new IllegalArgumentException("A brief description is required")
+        if (!taskType && !data.task?.trim()) throw new IllegalArgumentException("Task categorization is required")
+
+        if (!data.startTime.matches('^([01]\\d|2[0-3]):([0-5]\\d):([0-5]\\d)$')) throw new IllegalArgumentException("Invalid Start Time bounds structure")
+        if (!data.endTime.matches('^([01]\\d|2[0-3]):([0-5]\\d):([0-5]\\d)$')) throw new IllegalArgumentException("Invalid End Time bounds structure")
+
         LocalDate date = LocalDate.parse(data.date as String)
         LocalTime start = LocalTime.parse(data.startTime as String)
         LocalTime end = LocalTime.parse(data.endTime as String)
@@ -69,8 +77,16 @@ class TimesheetService {
     }
 
     private void validateTimesheetData(LocalDate date, LocalTime start, LocalTime end, User user, Long excludeId) {
+        if (date.isAfter(LocalDate.now())) {
+            throw new IllegalArgumentException("Cannot log timesheet for a future date")
+        }
+        
+        if (start.equals(end)) {
+            throw new IllegalArgumentException("Start time and end time cannot be equal")
+        }
+        
         if (!start.isBefore(end)) {
-            throw new IllegalArgumentException("End time must be after start time")
+            throw new IllegalArgumentException("End time must be strictly after start time")
         }
 
         // Fetch all existing timesheets for this user on this exact date

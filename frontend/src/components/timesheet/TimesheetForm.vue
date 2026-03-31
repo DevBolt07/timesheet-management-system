@@ -1,44 +1,46 @@
 <script setup>
 import { reactive, ref, computed } from 'vue'
 
-// Define exactly what this component yields to the parent
 const emit = defineEmits(['submit-entry'])
 
-const taskTypes = ['Teaching', 'Research', 'Administrative', 'Meeting', 'Other']
+const props = defineProps({
+  taskTypes: {
+    type: Array,
+    required: true,
+    default: () => []
+  },
+  initialData: {
+    type: Object,
+    default: null
+  }
+})
 
 const form = reactive({
-  date: new Date().toISOString().split('T')[0],
-  startTime: '',
-  endTime: '',
-  task: '',
-  description: ''
+  date: props.initialData?.date || new Date().toISOString().split('T')[0],
+  startTime: props.initialData?.startTime || '',
+  endTime: props.initialData?.endTime || '',
+  task: props.initialData?.task || '',
+  description: props.initialData?.description || ''
 })
 
 const errorMsg = ref('')
 
-// Computed property to disable button if incomplete
 const isFormValid = computed(() => {
   return form.date && form.startTime && form.endTime && form.task && form.description
 })
 
 const submitForm = () => {
   errorMsg.value = ''
-  
   if (!isFormValid.value) {
-    errorMsg.value = 'All fields are required.'
+    errorMsg.value = 'All parameters must be completed to file an official timesheet.'
     return
   }
-
-  // Core Validation: Time boundaries
   if (form.endTime <= form.startTime) {
-    errorMsg.value = 'End time must be cleanly after start time.'
+    errorMsg.value = 'Cronological failure: End time must fall after start time.'
     return
   }
-
-  // Fire event to View component with the pure data payload
   emit('submit-entry', { ...form })
   
-  // Clean up the local UI state
   form.startTime = ''
   form.endTime = ''
   form.task = ''
@@ -47,123 +49,206 @@ const submitForm = () => {
 </script>
 
 <template>
-  <div class="form-container">
-    <form @submit.prevent="submitForm">
-      
-      <div class="form-group">
-        <label>Date</label>
-        <input type="date" v-model="form.date" required />
-      </div>
+  <div class="erp-form-wrapper">
+    <div class="form-header">
+      <h3>Timesheet Details</h3>
+      <p>Log your daily activities accurately for payroll processing and managerial approval.</p>
+    </div>
 
+    <form @submit.prevent="submitForm" class="erp-form-body">
+      
       <div class="form-row">
         <div class="form-group half">
-          <label>Start Time</label>
-          <input type="time" v-model="form.startTime" required />
+          <label class="required">Date of Execution</label>
+          <input type="date" v-model="form.date" required class="form-control" />
         </div>
         <div class="form-group half">
-          <label>End Time</label>
-          <input type="time" v-model="form.endTime" required />
+          <label class="required">Task Classification</label>
+          <select v-model="form.task" required class="form-control">
+            <option disabled value="">Select institutional task type...</option>
+            <option v-for="task in taskTypes" :key="task" :value="task">{{ task }}</option>
+          </select>
         </div>
       </div>
 
-      <div class="form-group">
-        <label>Task Type</label>
-        <select v-model="form.task" required>
-          <option disabled value="">Please select one</option>
-          <option v-for="task in taskTypes" :key="task" :value="task">{{ task }}</option>
-        </select>
+      <div class="form-row time-boundaries">
+        <div class="form-group half">
+          <label class="required">Start Time</label>
+          <div class="time-input-wrap">
+            <span class="icon">🕗</span>
+            <input type="time" v-model="form.startTime" required class="form-control pl-icon" />
+          </div>
+        </div>
+        <div class="form-group half">
+          <label class="required">End Time</label>
+          <div class="time-input-wrap">
+            <span class="icon">🕖</span>
+            <input type="time" v-model="form.endTime" required class="form-control pl-icon" />
+          </div>
+        </div>
       </div>
 
-      <div class="form-group">
-        <label>Description</label>
-        <textarea v-model="form.description" rows="3" required placeholder="Describe your activity briefly"></textarea>
+      <div class="form-group wide">
+        <label class="required">Execution Output / Description</label>
+        <textarea v-model="form.description" rows="4" required class="form-control" placeholder="Provide a granular description of outputs produced..."></textarea>
       </div>
 
-      <div v-if="errorMsg" class="error-msg">{{ errorMsg }}</div>
-
-      <button type="submit" class="submit-btn" :disabled="!isFormValid">Log Time</button>
+      <!-- Action Footer -->
+      <div class="form-footer">
+        <div class="footer-error" v-if="errorMsg">
+           <span class="icon">⚠</span> {{ errorMsg }}
+        </div>
+        <div class="footer-actions">
+          <button type="button" class="btn-ghost">Cancel</button>
+          <button type="submit" class="btn-primary" :disabled="!isFormValid">
+            Submit Timesheet Record
+          </button>
+        </div>
+      </div>
     </form>
   </div>
 </template>
 
 <style scoped>
-.form-container {
-  background: white;
-  padding: 30px;
-  border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-  max-width: 500px;
+.erp-form-wrapper {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+  max-width: 800px;
+  margin: 0;
+  overflow: hidden;
 }
 
-.form-group {
-  margin-bottom: 24px;
-  display: flex;
-  flex-direction: column;
+.form-header {
+  padding: 24px 32px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: #f9fafb;
+}
+
+.form-header h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.form-header p {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  margin-top: 4px;
+}
+
+.erp-form-body {
+  padding: 32px;
 }
 
 .form-row {
   display: flex;
-  gap: 20px;
+  gap: 32px;
+  margin-bottom: 24px;
 }
 
 .half {
   flex: 1;
 }
 
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
 label {
+  font-size: 0.8125rem;
   font-weight: 600;
-  font-size: 0.95rem;
-  margin-bottom: 10px;
-  color: var(--primary-color);
-  letter-spacing: 0.02em;
+  color: var(--text-main);
+  margin-bottom: 8px;
 }
 
-input, select, textarea {
-  padding: 12px;
-  border: 1px solid var(--border-color);
+label.required::after {
+  content: '*';
+  color: #dc2626;
+  margin-left: 4px;
+}
+
+.form-control {
+  padding: 10px 14px;
+  border: 1px solid var(--border-subtle);
   border-radius: 6px;
-  font-size: 1rem;
-  background-color: #fafafa;
-  transition: all 0.15s ease;
+  font-size: 0.875rem;
+  background-color: var(--bg-surface);
+  color: var(--text-main);
+  transition: all 0.2s;
 }
 
-input:focus, select:focus, textarea:focus {
+.form-control:focus {
   outline: none;
-  border-color: var(--accent-color);
-  background-color: white;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+  border-color: var(--primary-blue);
+  box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.1);
 }
 
-.error-msg {
-  color: #dc3545;
-  margin-bottom: 15px;
-  font-size: 0.9rem;
-  font-weight: 500;
+/* Time inputs with icon prepends */
+.time-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
 }
-
-.submit-btn {
-  background-color: var(--accent-color);
-  color: white;
-  border: none;
-  padding: 14px 24px;
-  border-radius: 6px;
-  font-size: 1.05rem;
-  font-weight: 600;
-  cursor: pointer;
+.time-input-wrap .icon {
+  position: absolute;
+  left: 14px;
+  font-size: 1.1rem;
+  pointer-events: none;
+}
+.pl-icon {
+  padding-left: 40px;
   width: 100%;
-  box-shadow: 0 4px 6px rgba(16, 185, 129, 0.25);
-  margin-top: 10px;
-  transition: all 0.1s ease;
 }
 
-.submit-btn:hover:not(:disabled) {
-  background-color: #059669;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 12px rgba(16, 185, 129, 0.3);
+textarea.form-control {
+  resize: vertical;
 }
 
-.submit-btn:disabled {
-  background-color: #a0aec0;
+.form-footer {
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.footer-error {
+  color: #dc2626;
+  font-size: 0.875rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.footer-actions {
+  display: flex;
+  gap: 16px;
+  margin-left: auto;
+}
+
+.btn-ghost {
+  padding: 10px 20px;
+  color: var(--text-muted);
+  font-weight: 500;
+  border-radius: 6px;
+  border: 1px solid transparent;
+}
+.btn-ghost:hover {
+  background-color: #f3f4f6;
+  color: var(--text-main);
+}
+
+.btn-primary {
+  padding: 10px 24px;
+  font-size: 0.875rem;
+}
+.btn-primary:disabled {
+  background-color: #9ca3af;
   cursor: not-allowed;
 }
 </style>

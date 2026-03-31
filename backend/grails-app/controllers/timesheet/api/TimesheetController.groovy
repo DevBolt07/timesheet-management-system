@@ -1,7 +1,9 @@
 package timesheet.api
 
 import grails.converters.JSON
+import grails.gorm.transactions.Transactional
 
+@Transactional
 class TimesheetController {
 
     TimesheetService timesheetService

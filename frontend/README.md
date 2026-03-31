@@ -1,44 +1,69 @@
-# timesheet-app
+# Timesheet Management System - Frontend SPA
 
-This template should help get you started developing with Vue 3 in Vite.
+This is the Vue 3 frontend for the College ERP Timesheet module. It uses modern tooling to provide a robust, responsive, institutional-grade single-page application.
 
-## Recommended IDE Setup
+## Tech Stack
+- **Framework:** Vue 3 (Composition API)
+- **Tooling:** Vite
+- **State Management:** Pinia
+- **Routing:** Vue Router
+- **Styling:** Vanilla CSS (Enterprise ERP standard theme)
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+## Setup & Running the Application
 
-## Recommended Browser Setup
-
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
-
-## Customize configuration
-
-See [Vite Configuration Reference](https://vite.dev/config/).
-
-## Project Setup
-
-```sh
+### 1. Install Dependencies
+Open a terminal in the `frontend` directory and run:
+```bash
 npm install
 ```
 
-### Compile and Hot-Reload for Development
+### 2. Configure Backend Proxy
+The frontend proxies API calls strictly through Vite. If your backend is running on a port other than `8080`, ensure you update `vite.config.js`:
+```javascript
+server: {
+  proxy: {
+    '/api': {
+      target: 'http://localhost:8080',
+      changeOrigin: true
+    }
+  }
+}
+```
 
-```sh
+### 3. Start Development Server
+```bash
 npm run dev
 ```
+The application will be accessible at: `http://localhost:5173`
 
-### Compile and Minify for Production
+---
 
-```sh
-npm run build
-```
+## Application Structure & Navigation
 
-### Lint with [ESLint](https://eslint.org/)
+The interface was redesigned to match legacy-but-clean college ERP patterns:
 
-```sh
-npm run lint
-```
+### Views
+- **`LandingView.vue` (`/`)**: A clean Role Selection page (Staff, Manager, Admin). Non-staff roles are currently visually present but disabled for future expansion.
+- **`MainLayout.vue`**: The main ERP shell once a user logs in. Features a fixed top institutional banner, breadcrumbs, and a side menu.
+- **`ViewTimesheetView.vue` (`/app/history`)**: Master Data view displaying logged timesheets in a classic HTML table with a functional layout (search, status filters, delete actions).
+- **`AddTimesheetView.vue` (`/app/log-time`)**: Specialized entry form replicating the "Add Timesheet" UI of a traditional ERP portal.
+
+### State Management (`stores/timesheetStore.js`)
+All API calls and system states are maintained globally via Pinia.
+- **`entries`**: Array containing the active user's timesheet logs.
+- **`taskTypes`**: Array of administrative tasks dynamically fetched from the Grails `/api/taskTypes` endpoint.
+- **`fetchEntries()`**: Synchronizes local state with backend database.
+- **`addEntry(payload)`**: POSTs new valid records to the API.
+- **`deleteEntry(id)`**: Deletes records providing they are strictly in the `PENDING` state.
+
+## Styling Guidelines (`assets/main.css`)
+- **Do not use tailwind or complex CSS frameworks.**
+- The project runs on standard CSS variables targeting an "Institutional Appearance".
+- **Primary Color:** `#2563eb` (Professional Blue)
+- **Backgrounds:** `#f1f5f9` for generic spaces, `#ffffff` for standard `.erp-card` containers.
+- Form components must rely on traditional standard HTML input designs with clean borders and explicit label tracking, eschewing generic floating or placeholder-only designs.
+
+## Next Development Steps
+- Bind actual user authentication limits (JWT storage).
+- Complete the "Edit" entry workflow by passing parameters into the `TimesheetForm`.
+- Build the "Manager Dashboard" view for bulk approving `PENDING` statuses.

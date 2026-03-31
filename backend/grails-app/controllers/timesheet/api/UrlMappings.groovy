@@ -9,6 +9,7 @@ class UrlMappings {
         }
         
         "/api/timesheets"(resources: 'timesheet')
+        "/api/taskTypes"(resources: 'taskType')
 
         "/"(view:"/index")
         "500"(view:'/error')
