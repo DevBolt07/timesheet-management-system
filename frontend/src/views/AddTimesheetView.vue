@@ -11,6 +11,7 @@ const router = useRouter()
 
 const isEditMode = ref(false)
 const editingId = ref(null)
+const editingEntry = ref(null)
 
 onMounted(async () => {
   if (taskTypesList.value.length === 0) {
@@ -28,6 +29,7 @@ onMounted(async () => {
     
     const entry = entries.value.find(e => e.id === editingId.value)
     if (entry && (entry.status === 'PENDING' || entry.status === 'REJECTED')) {
+       editingEntry.value = entry
        form.date = entry.date
        
        const startParsed = parse12Hour(entry.startTime)
@@ -237,6 +239,18 @@ const submitForm = async () => {
         <p>{{ successMsg }}</p>
       </div>
     </div>
+    <div v-if="isEditMode && editingEntry?.adminOverrideReason" class="form-feedback info">
+      <span class="fb-icon">i</span>
+      <div>
+        <strong>Admin Reopened This Entry:</strong>
+        <p>{{ editingEntry.adminOverrideReason }}</p>
+        <p v-if="editingEntry.adminOverrideBy" class="secondary-feedback">
+          Reopened by {{ editingEntry.adminOverrideBy }}
+          <span v-if="editingEntry.adminOverrideFromStatus"> from {{ editingEntry.adminOverrideFromStatus }}</span>
+          for controlled correction.
+        </p>
+      </div>
+    </div>
 
     <form @submit.prevent="submitForm" class="erp-form" novalidate>
 
@@ -444,6 +458,8 @@ const submitForm = async () => {
 .form-feedback p { margin: 3px 0 0; font-weight: normal; }
 .form-feedback.error { color: #991b1b; border: 1px solid #fecaca; background-color: #fef2f2; }
 .form-feedback.success { color: #166534; border: 1px solid #bbf7d0; background-color: #f0fdf4; }
+.form-feedback.info { color: #1e3a8a; border: 1px solid #bfdbfe; background-color: #eff6ff; }
+.secondary-feedback { margin-top: 6px; color: #475569; }
 
 /* ── Form Body ───────────────────────────────────────────────────────────── */
 .erp-form {

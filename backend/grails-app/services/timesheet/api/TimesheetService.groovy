@@ -3,6 +3,7 @@ package timesheet.api
 import grails.gorm.transactions.Transactional
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.LocalDateTime
 
 @Transactional
 class TimesheetService {
@@ -98,6 +99,7 @@ class TimesheetService {
         if (!timesheet) throw new IllegalArgumentException("Timesheet instance target could not be successfully resolved")
         if (timesheet.user.id != currentUser.id) throw new SecurityException("Cannot command deletions upon outside user boundaries internally")
         if (timesheet.status != Status.PENDING) throw new IllegalArgumentException("Only universally PENDING models can undergo successful deletion mappings.")
+        if (timesheet.adminOverrideAt) throw new IllegalArgumentException("This entry was reopened by Admin for correction. Please update and resubmit it instead of deleting it.")
         
         timesheet.delete(flush: true)
     }
@@ -112,6 +114,33 @@ class TimesheetService {
 
         timesheet.status = newStatus
         timesheet.reviewerRemarks = remarks?.trim() ?: null
+        timesheet.save(flush: true, failOnError: true)
+        return timesheet
+    }
+
+    def adminReopenTimesheet(Long id, String reason, User adminUser) {
+        if (adminUser.role != Role.ADMIN) {
+            throw new SecurityException("Only Admin can reopen locked workflow records")
+        }
+
+        String trimmedReason = reason?.trim()
+        if (!trimmedReason) {
+            throw new IllegalArgumentException("Admin override reason is required")
+        }
+
+        Timesheet timesheet = Timesheet.get(id)
+        if (!timesheet) {
+            throw new IllegalArgumentException("Target timesheet could not be resolved")
+        }
+        if (timesheet.status == Status.PENDING) {
+            throw new IllegalArgumentException("Pending entries do not require admin reopening")
+        }
+
+        timesheet.adminOverrideFromStatus = timesheet.status
+        timesheet.adminOverrideReason = trimmedReason
+        timesheet.adminOverrideBy = adminUser.username
+        timesheet.adminOverrideAt = LocalDateTime.now()
+        timesheet.status = Status.PENDING
         timesheet.save(flush: true, failOnError: true)
         return timesheet
     }

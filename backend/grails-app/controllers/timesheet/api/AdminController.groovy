@@ -7,6 +7,7 @@ import grails.gorm.transactions.Transactional
 class AdminController {
 
     IdentityResolutionService identityResolutionService
+    TimesheetService timesheetService
 
     static responseFormats = ['json']
 
@@ -16,6 +17,25 @@ class AdminController {
             throw new SecurityException("Access denied: Admin privileges required")
         }
         return user
+    }
+
+    private Map buildTimesheetDTO(Timesheet t) {
+        return [
+            id: t.id,
+            date: t.entryDate.toString(),
+            startTime: t.startTime.toString(),
+            endTime: t.endTime.toString(),
+            task: t.taskType?.name ?: t.customTaskName,
+            description: t.description,
+            status: t.status.name(),
+            reviewerRemarks: t.reviewerRemarks,
+            adminOverrideReason: t.adminOverrideReason,
+            adminOverrideBy: t.adminOverrideBy,
+            adminOverrideAt: t.adminOverrideAt?.toString(),
+            adminOverrideFromStatus: t.adminOverrideFromStatus?.name(),
+            user: t.user?.username,
+            userId: t.user?.id
+        ]
     }
 
     // ── Dashboard Metrics ────────────────────────────────────────
@@ -52,25 +72,29 @@ class AdminController {
         try {
             requireAdmin()
 
-            def list = Timesheet.list(sort: 'entryDate', order: 'desc').collect { t ->
-                [
-                    id: t.id,
-                    date: t.entryDate.toString(),
-                    startTime: t.startTime.toString(),
-                    endTime: t.endTime.toString(),
-                    task: t.taskType?.name ?: t.customTaskName,
-                    description: t.description,
-                    status: t.status.name(),
-                    reviewerRemarks: t.reviewerRemarks,
-                    user: t.user?.username,
-                    userId: t.user?.id
-                ]
-            }
+            def list = Timesheet.list(sort: 'entryDate', order: 'desc').collect { t -> buildTimesheetDTO(t) }
 
             render([success: true, data: list] as JSON)
 
         } catch (SecurityException e) {
             render status: 403, text: ([success: false, message: e.message] as JSON)
+        } catch (Exception e) {
+            render status: 500, text: ([success: false, message: e.message] as JSON)
+        }
+    }
+
+    // PUT /api/admin/timesheets/$id/reopen
+    def reopenTimesheet(Long id) {
+        try {
+            User adminUser = requireAdmin()
+            def data = request.JSON
+            def timesheet = timesheetService.adminReopenTimesheet(id, data.reason as String, adminUser)
+
+            render([success: true, data: buildTimesheetDTO(timesheet), message: 'Timesheet reopened for correction'] as JSON)
+        } catch (SecurityException e) {
+            render status: 403, text: ([success: false, message: e.message] as JSON)
+        } catch (IllegalArgumentException e) {
+            render status: 400, text: ([success: false, message: e.message] as JSON)
         } catch (Exception e) {
             render status: 500, text: ([success: false, message: e.message] as JSON)
         }

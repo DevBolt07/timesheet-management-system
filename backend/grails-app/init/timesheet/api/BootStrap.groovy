@@ -1,6 +1,10 @@
 package timesheet.api
 
+import groovy.sql.Sql
+
 class BootStrap {
+
+    def dataSource
 
     def init = { servletContext ->
         def masterTasks = [
@@ -39,8 +43,21 @@ class BootStrap {
             seedUser('rahul.verma', 'staff123', Role.STAFF)
             seedUser('dr.sharma', 'manager123', Role.HOD)
             seedUser('system.admin', 'admin123', Role.ADMIN)
+
+            alignOptionalTaskReference()
         }
     }
     def destroy = {
+    }
+
+    private void alignOptionalTaskReference() {
+        Sql sql = new Sql(dataSource)
+        try {
+            sql.execute('ALTER TABLE timesheet MODIFY COLUMN task_type_id BIGINT NULL')
+        } catch (Exception ignored) {
+            // Ignore if the schema is already aligned or the table is not yet available during bootstrap.
+        } finally {
+            sql.close()
+        }
     }
 }

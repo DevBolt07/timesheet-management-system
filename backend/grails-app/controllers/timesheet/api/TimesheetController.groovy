@@ -25,6 +25,10 @@ class TimesheetController {
             description: t.description,
             status: t.status.name(),
             reviewerRemarks: t.reviewerRemarks,
+            adminOverrideReason: t.adminOverrideReason,
+            adminOverrideBy: t.adminOverrideBy,
+            adminOverrideAt: t.adminOverrideAt?.toString(),
+            adminOverrideFromStatus: t.adminOverrideFromStatus?.name(),
             user: t.user?.username,
             userId: t.user?.id
         ]

@@ -98,6 +98,21 @@ const closeRemark = () => {
   remarkModal.value = { open: false, text: '' }
 }
 
+const buildEntryNotes = (entry) => {
+  const notes = []
+  if (entry.reviewerRemarks) {
+    notes.push(`Reviewer Note:\n${entry.reviewerRemarks}`)
+  }
+  if (entry.adminOverrideReason) {
+    const overrideMeta = [
+      entry.adminOverrideBy ? `Admin: ${entry.adminOverrideBy}` : null,
+      entry.adminOverrideFromStatus ? `From Status: ${entry.adminOverrideFromStatus}` : null
+    ].filter(Boolean).join('\n')
+    notes.push(`Admin Reopen Note:\n${entry.adminOverrideReason}${overrideMeta ? `\n\n${overrideMeta}` : ''}`)
+  }
+  return notes.join('\n\n')
+}
+
 const format12H = (time24) => {
   if (!time24) return ''
   let [h, m] = time24.split(':')
@@ -120,6 +135,15 @@ const getStatusClass = (status) => {
 }
 
 const isDeleting = ref(null)
+const getDeleteBlockReason = (entry) => {
+  if (entry.adminOverrideAt) {
+    return 'This entry was reopened by Admin for correction. Please update and resubmit it instead of deleting it.'
+  }
+  if (entry.status !== 'PENDING') {
+    return 'Only pending entries can be deleted.'
+  }
+  return ''
+}
 
 const removeEntry = async (id) => {
   if (!confirm('Are you sure you want to permanently delete this pending timesheet entry?')) return
@@ -127,7 +151,8 @@ const removeEntry = async (id) => {
     isDeleting.value = id
     await store.deleteEntry(id)
   } catch(e) {
-    alert("Delete failed: " + e.message)
+    const message = e.message || 'The entry could not be deleted.'
+    alert(`Unable to delete entry.\n\n${message}`)
   } finally {
     isDeleting.value = null
   }
@@ -139,6 +164,7 @@ const editEntry = (id) => {
 
 const canEditEntry = (entry) => entry.status === 'PENDING' || entry.status === 'REJECTED'
 const isLockedEntry = (entry) => entry.status === 'APPROVED'
+const canDeleteEntry = (entry) => entry.status === 'PENDING' && !entry.adminOverrideAt
 </script>
 
 <template>
@@ -260,12 +286,12 @@ const isLockedEntry = (entry) => entry.status === 'APPROVED'
             </td>
             <td class="remarks-cell">
               <button
-                v-if="entry.reviewerRemarks"
+                v-if="entry.reviewerRemarks || entry.adminOverrideReason"
                 class="remark-btn"
-                :title="entry.reviewerRemarks"
-                @click="openRemark(entry.reviewerRemarks)"
+                :title="entry.adminOverrideReason ? 'View reviewer and admin notes' : entry.reviewerRemarks"
+                @click="openRemark(buildEntryNotes(entry))"
               >
-                💬 View Note
+                View Notes
               </button>
               <span v-else class="empty-dash">—</span>
             </td>
@@ -280,9 +306,9 @@ const isLockedEntry = (entry) => entry.status === 'APPROVED'
                 <div class="act-divider"></div>
                 <button 
                   class="act-btn delete-btn" 
-                  :disabled="entry.status !== 'PENDING' || isDeleting === entry.id" 
+                  :disabled="!canDeleteEntry(entry) || isDeleting === entry.id" 
                   @click="removeEntry(entry.id)"
-                  title="Remove pending entry"><span v-if="isDeleting===entry.id">...</span><span v-else>Del</span></button>
+                  :title="canDeleteEntry(entry) ? 'Remove pending entry' : getDeleteBlockReason(entry)"><span v-if="isDeleting===entry.id">...</span><span v-else>Del</span></button>
               </div>
               <!-- Lock indicator for staff on non-pending -->
               <span v-if="entry.status !== 'PENDING' && isStaff" class="locked-icon" title="Entry is locked by Management">🔒</span>
