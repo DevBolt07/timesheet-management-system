@@ -25,8 +25,28 @@ class TimesheetController {
             description: t.description,
             status: t.status.name(),
             reviewerRemarks: t.reviewerRemarks,
-            user: t.user?.username
+            user: t.user?.username,
+            userId: t.user?.id
         ]
+    }
+
+    // Returns list of staff users for HOD filtering dropdowns
+    def staffList() {
+        try {
+            User currentUser = getAuthenticatedUser()
+            if (currentUser.role != Role.HOD && currentUser.role != Role.ADMIN) {
+                render status: 403, text: ([success: false, message: 'Access restricted to management roles'] as JSON)
+                return
+            }
+            def staffUsers = User.findAllByRole(Role.STAFF).collect { u ->
+                [id: u.id, username: u.username]
+            }
+            render([success: true, data: staffUsers] as JSON)
+        } catch (SecurityException e) {
+            render status: 403, text: ([success: false, message: e.message] as JSON)
+        } catch (Exception e) {
+            render status: 500, text: ([success: false, message: e.message] as JSON)
+        }
     }
 
     def index() {

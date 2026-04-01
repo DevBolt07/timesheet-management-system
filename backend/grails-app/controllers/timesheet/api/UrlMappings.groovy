@@ -12,6 +12,7 @@ class UrlMappings {
         "/api/timesheets"(resources: 'timesheet')
         "/api/taskTypes"(resources: 'taskType')
         "/api/auth/demo-login"(controller: 'auth', action: 'demoLogin', method: 'POST')
+        "/api/users/staff"(controller: 'timesheet', action: 'staffList', method: 'GET')
 
         "/"(view:"/index")
         "500"(view:'/error')
