@@ -128,37 +128,42 @@ watch(() => form.taskSelect, (newVal) => {
 })
 
 const hours = Array.from({length: 12}, (_, i) => (i + 1).toString().padStart(2, '0'))
+const minutes = Array.from({length: 60}, (_, i) => i.toString().padStart(2, '0'))
 const ampm = ['AM', 'PM']
 
 const formatTo24Hour = (h, m, a) => {
   let hrs = parseInt(h, 10)
   let mins = parseInt(m || 0, 10)
-  if (mins < 0 || mins > 59) return 'INVALID'
+  if (isNaN(hrs) || isNaN(mins) || hrs < 1 || hrs > 12 || mins < 0 || mins > 59) return 'INVALID'
   if (a === 'PM' && hrs !== 12) hrs += 12
   if (a === 'AM' && hrs === 12) hrs = 0
   return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:00`
-}
-
-const cleanMinute = (field, event) => {
-  let val = event.target.value.replace(/\D/g, '')
-  if (val.length > 2) val = val.substring(0, 2)
-  if (val !== '' && parseInt(val, 10) > 59) val = '59'
-  form[field] = val
-  event.target.value = val
-}
-
-const padMinute = (field) => {
-  if (form[field] === '') {
-    form[field] = '00'
-  } else {
-    form[field] = String(form[field]).padStart(2, '0')
-  }
 }
 
 const parseDateString = (dateStr) => {
   const parts = dateStr.split('-')
   return new Date(parts[0], parts[1] - 1, parts[2])
 }
+
+const computedDuration = computed(() => {
+  const start = formatTo24Hour(form.startH, form.startM, form.startA)
+  const end = formatTo24Hour(form.endH, form.endM, form.endA)
+  if (start === 'INVALID' || end === 'INVALID') return null
+  if (start >= end) return null
+
+  const startParts = start.split(':')
+  const endParts = end.split(':')
+  const startMins = parseInt(startParts[0]) * 60 + parseInt(startParts[1])
+  const endMins = parseInt(endParts[0]) * 60 + parseInt(endParts[1])
+  
+  const diffMins = endMins - startMins
+  const hrs = Math.floor(diffMins / 60)
+  const mins = diffMins % 60
+  
+  if (hrs === 0) return `${mins} minutes`
+  if (mins === 0) return hrs === 1 ? '1 hour' : `${hrs} hours`
+  return `${hrs} ${hrs === 1 ? 'hour' : 'hours'} ${mins} minutes`
+})
 
 const validationState = computed(() => {
   const errors = {}
@@ -276,7 +281,13 @@ const submitForm = async () => {
 
       <!-- Section: Date & Time -->
       <div class="form-section">
-        <div class="form-section-label">Date &amp; Time</div>
+        <div class="form-section-header-wrap">
+          <div class="form-section-label">Date &amp; Time</div>
+          <div v-if="computedDuration" class="duration-badge">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="clock-icon"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            {{ computedDuration }}
+          </div>
+        </div>
         <div class="form-row">
           <div class="input-block date-block" :class="{ 'has-field-error': hasSubmitted && validationState.errors.date }">
             <label>Date <span class="req">*</span></label>
@@ -288,29 +299,49 @@ const submitForm = async () => {
 
           <div class="input-block time-block" :class="{ 'has-field-error': hasSubmitted && validationState.errors.time }">
             <label>Start Time <span class="req">*</span></label>
-            <div class="time-selectors">
-              <select v-model="form.startH" class="time-part" :disabled="isSaving">
-                <option v-for="h in hours" :key="'sh'+h" :value="h">{{ h }}</option>
-              </select>
-              <span class="colon">:</span>
-              <input type="text" inputmode="numeric" maxlength="2" placeholder="00" :value="form.startM" @input="cleanMinute('startM', $event)" class="time-part min-input" :disabled="isSaving" @blur="padMinute('startM')" autocomplete="off" />
-              <select v-model="form.startA" class="time-ampm" :disabled="isSaving">
-                <option v-for="a in ampm" :key="'sa'+a" :value="a">{{ a }}</option>
-              </select>
+            <div class="time-entry-group">
+              <div class="time-select-wrap">
+                <span class="time-hint">HH</span>
+                <select v-model="form.startH" class="time-select" :disabled="isSaving">
+                  <option v-for="h in hours" :key="'start-hour-' + h" :value="h">{{ h }}</option>
+                </select>
+              </div>
+              <span class="time-divider">:</span>
+              <div class="time-select-wrap">
+                <span class="time-hint">MM</span>
+                <select v-model="form.startM" class="time-select" :disabled="isSaving">
+                  <option v-for="m in minutes" :key="'start-minute-' + m" :value="m">{{ m }}</option>
+                </select>
+              </div>
+              <div class="time-ampm-wrap">
+                <select v-model="form.startA" class="time-ampm" :disabled="isSaving">
+                  <option v-for="a in ampm" :key="'sa'+a" :value="a">{{ a }}</option>
+                </select>
+              </div>
             </div>
           </div>
 
           <div class="input-block time-block" :class="{ 'has-field-error': hasSubmitted && validationState.errors.time }">
             <label>End Time <span class="req">*</span></label>
-            <div class="time-selectors">
-              <select v-model="form.endH" class="time-part" :disabled="isSaving">
-                <option v-for="h in hours" :key="'eh'+h" :value="h">{{ h }}</option>
-              </select>
-              <span class="colon">:</span>
-              <input type="text" inputmode="numeric" maxlength="2" placeholder="00" :value="form.endM" @input="cleanMinute('endM', $event)" class="time-part min-input" :disabled="isSaving" @blur="padMinute('endM')" autocomplete="off" />
-              <select v-model="form.endA" class="time-ampm" :disabled="isSaving">
-                <option v-for="a in ampm" :key="'ea'+a" :value="a">{{ a }}</option>
-              </select>
+            <div class="time-entry-group">
+              <div class="time-select-wrap">
+                <span class="time-hint">HH</span>
+                <select v-model="form.endH" class="time-select" :disabled="isSaving">
+                  <option v-for="h in hours" :key="'end-hour-' + h" :value="h">{{ h }}</option>
+                </select>
+              </div>
+              <span class="time-divider">:</span>
+              <div class="time-select-wrap">
+                <span class="time-hint">MM</span>
+                <select v-model="form.endM" class="time-select" :disabled="isSaving">
+                  <option v-for="m in minutes" :key="'end-minute-' + m" :value="m">{{ m }}</option>
+                </select>
+              </div>
+              <div class="time-ampm-wrap">
+                <select v-model="form.endA" class="time-ampm" :disabled="isSaving">
+                  <option v-for="a in ampm" :key="'ea'+a" :value="a">{{ a }}</option>
+                </select>
+              </div>
             </div>
           </div>
 
@@ -495,6 +526,13 @@ const submitForm = async () => {
   border-bottom: 1px solid var(--border-light);
 }
 
+.form-section-header-wrap {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
 .form-section-label {
   font-size: 0.65rem;
   text-transform: uppercase;
@@ -502,6 +540,29 @@ const submitForm = async () => {
   letter-spacing: 0.07em;
   color: var(--text-muted);
   margin-bottom: 14px;
+}
+
+.form-section-header-wrap .form-section-label {
+  margin-bottom: 0;
+}
+
+.duration-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background-color: #f1f5f9;
+  color: #475569;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 12px;
+  border: 1px solid #cbd5e1;
+}
+
+.clock-icon {
+  width: 13px;
+  height: 13px;
+  color: #64748b;
 }
 
 .form-row {
@@ -522,7 +583,7 @@ const submitForm = async () => {
 .flex-1 { flex: 1; }
 .flex-full { width: 100%; }
 .date-block { width: 200px; flex-shrink: 0; }
-.time-block { width: 160px; flex-shrink: 0; }
+.time-block { min-width: 180px; flex-shrink: 0; }
 .checkbox-block {
   flex: 1;
   display: flex;
@@ -625,59 +686,98 @@ textarea.classic-input {
 .clean-date::-webkit-calendar-picker-indicator:hover { opacity: 0.9; }
 
 /* 12-HR Time Selectors */
-.time-selectors {
+.time-entry-group {
   display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+.time-select-wrap,
+.time-input-wrap {
+  display: flex;
+  flex-direction: column;
   align-items: center;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   background-color: #fff;
-  height: 36px;
-  overflow: hidden;
+  padding: 5px 6px 4px;
+  width: 44px;
+  box-sizing: border-box;
+  transition: all 0.15s;
 }
-.time-selectors:focus-within {
+.time-select-wrap {
+  width: 52px;
+}
+.time-input-wrap:focus-within,
+.time-select-wrap:focus-within {
   border-color: var(--primary-color);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
 }
-.time-part {
+.time-hint {
+  font-size: 0.55rem;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 3px;
+}
+.time-select {
+  width: 100%;
   border: none;
   background: transparent;
-  flex: 1;
-  text-align: center;
-  font-size: 0.84rem;
-  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
   color: var(--text-main);
+  text-align: center;
+  text-align-last: center;
+  font-family: inherit;
+  padding: 0;
+  cursor: pointer;
   appearance: none;
   -webkit-appearance: none;
-  padding: 0 3px;
-  cursor: pointer;
-  text-align-last: center;
+  line-height: 1.2;
 }
-.min-input::-webkit-outer-spin-button,
-.min-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-.min-input { -moz-appearance: textfield; }
-.time-part:focus { outline: none; }
+.time-select:focus {
+  outline: none;
+}
+.time-select:disabled {
+  cursor: not-allowed;
+  color: var(--text-muted);
+}
+
+.time-divider {
+  font-weight: 700;
+  color: #475569;
+  font-size: 1rem;
+  margin-top: 19px;
+}
+
+.time-ampm-wrap {
+  margin-left: 2px;
+}
 .time-ampm {
-  border: none;
+  border: 1px solid var(--border-color);
   background: #f1f5f9;
-  border-left: 1px solid var(--border-color);
-  height: 100%;
+  border-radius: var(--radius-md);
+  height: 48px;
   font-weight: 700;
   font-size: 0.78rem;
   color: #334155;
-  width: 46px;
+  width: 48px;
   text-align: center;
   text-align-last: center;
   appearance: none;
   -webkit-appearance: none;
   cursor: pointer;
+  padding: 0;
+  margin-top: 0;
 }
-.time-ampm:focus { outline: none; }
-.colon { font-weight: 700; color: #94a3b8; font-size: 0.9rem; }
+.time-ampm:focus { outline: none; border-color: var(--primary-color); }
+.time-ampm:disabled { cursor: not-allowed; color: var(--text-muted); opacity: 0.8; }
 
 /* Error States */
 .has-field-error .classic-input,
-.has-field-error .time-selectors { border-color: #dc2626; }
-.has-field-error .time-ampm { background-color: #fee2e2; border-left-color: #fca5a5; }
+.has-field-error .time-select-wrap { border-color: #dc2626; box-shadow: 0 0 0 1px #fee2e2; }
+.has-field-error .time-ampm { border-color: #fca5a5; background-color: #fee2e2; }
 
 .field-error {
   color: #dc2626;
