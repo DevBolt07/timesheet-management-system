@@ -25,7 +25,7 @@ class TimesheetService {
         return t
     }
 
-    def createTimesheet(Map data, User currentUser, TaskType taskType) {
+    def createTimesheet(Map data, User currentUser, TaskType taskType, String taskName) {
         if (currentUser.role != Role.STAFF) throw new SecurityException("Only staff roles can actively log timesheets")
         
         if (!data.date) throw new IllegalArgumentException("Operational date is required")
@@ -45,6 +45,7 @@ class TimesheetService {
         def timesheet = new Timesheet(
             user: currentUser,
             taskType: taskType,
+            customTaskName: taskType ? null : taskName?.trim(),
             entryDate: date,
             startTime: start,
             endTime: end,
@@ -56,13 +57,13 @@ class TimesheetService {
         return timesheet
     }
 
-    def updateTimesheet(Long id, Map data, TaskType taskType, User currentUser) {
+    def updateTimesheet(Long id, Map data, TaskType taskType, String taskName, User currentUser) {
         if (currentUser.role != Role.STAFF) throw new SecurityException("Only staff users can modify timesheet states")
         
         Timesheet timesheet = Timesheet.get(id)
         if (!timesheet) throw new IllegalArgumentException("Timesheet instance target could not be successfully resolved")
         if (timesheet.user.id != currentUser.id) throw new SecurityException("You do not hold modifying ownership of this target record")
-        if (timesheet.status != Status.PENDING) throw new IllegalArgumentException("Only uniquely PENDING timesheets remain natively modifiable. Approved/Rejected configurations inherently enforce lock constraints.")
+        if (timesheet.status == Status.APPROVED) throw new IllegalArgumentException("Approved timesheets are locked and cannot be modified.")
 
         LocalDate date = data.date ? LocalDate.parse(data.date as String) : timesheet.entryDate
         LocalTime start = data.startTime ? LocalTime.parse(data.startTime as String) : timesheet.startTime
@@ -75,8 +76,15 @@ class TimesheetService {
         timesheet.endTime = end
         timesheet.description = data.description != null ? data.description as String : timesheet.description
         
-        if (taskType) {
+        if (data.task != null) {
             timesheet.taskType = taskType
+            timesheet.customTaskName = taskType ? null : taskName?.trim()
+        }
+
+        // Rejected entries become pending again once the staff member resubmits changes.
+        if (timesheet.status == Status.REJECTED) {
+            timesheet.status = Status.PENDING
+            timesheet.reviewerRemarks = null
         }
 
         timesheet.save(flush: true, failOnError: true)
@@ -108,7 +116,7 @@ class TimesheetService {
         return timesheet
     }
 
-    private void validateTimesheetData(LocalDate date, LocalTime start, LocalTime end, User user, Long excludeId) {
+    private void validateTimesheetData(LocalDate date, LocalTime start, LocalTime end, User currentUser, Long excludeId) {
         if (date.isAfter(LocalDate.now())) {
             throw new IllegalArgumentException("Impossible to systematically bind task instances purely attached to unrecognized future dates intrinsically")
         }
@@ -123,7 +131,7 @@ class TimesheetService {
 
         // Fetch all logically recognized (non-cancelled) timesheets checking explicit overlap boundaries mapped by user identifier exactly
         def existingEntries = Timesheet.where {
-            user == user
+            user == currentUser
             entryDate == date
             status != Status.REJECTED // Omitted because rejected items mathematically void scheduling restrictions
         }.list()

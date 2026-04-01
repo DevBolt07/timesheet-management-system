@@ -58,7 +58,7 @@ class AdminController {
                     date: t.entryDate.toString(),
                     startTime: t.startTime.toString(),
                     endTime: t.endTime.toString(),
-                    task: t.taskType?.name,
+                    task: t.taskType?.name ?: t.customTaskName,
                     description: t.description,
                     status: t.status.name(),
                     reviewerRemarks: t.reviewerRemarks,
@@ -107,7 +107,7 @@ class AdminController {
             requireAdmin()
             def list = TaskType.list().collect { t ->
                 def usageCount = Timesheet.countByTaskType(t)
-                [id: t.id, name: t.name, usageCount: usageCount]
+                [id: t.id, name: t.name, usageCount: usageCount, isActive: t.isActive]
             }
             render([success: true, data: list] as JSON)
         } catch (SecurityException e) {
@@ -127,12 +127,20 @@ class AdminController {
                 render status: 400, text: ([success: false, message: 'Task name is required'] as JSON)
                 return
             }
-            if (TaskType.findByName(name)) {
+            def existing = TaskType.findByName(name)
+            if (existing) {
+                if (!existing.isActive) {
+                    existing.isActive = true
+                    existing.save(flush: true, failOnError: true)
+                    def reactivatedUsageCount = Timesheet.countByTaskType(existing)
+                    render status: 200, text: ([success: true, data: [id: existing.id, name: existing.name, usageCount: reactivatedUsageCount, isActive: true], message: 'Task category reactivated'] as JSON)
+                    return
+                }
                 render status: 409, text: ([success: false, message: 'Task category already exists'] as JSON)
                 return
             }
             def task = new TaskType(name: name).save(flush: true, failOnError: true)
-            render status: 201, text: ([success: true, data: [id: task.id, name: task.name, usageCount: 0]] as JSON)
+            render status: 201, text: ([success: true, data: [id: task.id, name: task.name, usageCount: 0, isActive: true]] as JSON)
         } catch (SecurityException e) {
             render status: 403, text: ([success: false, message: e.message] as JSON)
         } catch (Exception e) {
@@ -151,7 +159,9 @@ class AdminController {
             }
             def usageCount = Timesheet.countByTaskType(task)
             if (usageCount > 0) {
-                render status: 409, text: ([success: false, message: "Cannot delete '${task.name}': it is referenced by ${usageCount} timesheet record(s). Deactivation support is planned for a future release."] as JSON)
+                task.isActive = false
+                task.save(flush: true, failOnError: true)
+                render([success: true, data: [id: task.id, name: task.name, usageCount: usageCount, isActive: false], message: "Task category '${task.name}' was deactivated because it is referenced by ${usageCount} timesheet record(s)."] as JSON)
                 return
             }
             task.delete(flush: true)

@@ -136,6 +136,9 @@ const removeEntry = async (id) => {
 const editEntry = (id) => {
   router.push({ path: '/app/log-time', query: { editId: id } })
 }
+
+const canEditEntry = (entry) => entry.status === 'PENDING' || entry.status === 'REJECTED'
+const isLockedEntry = (entry) => entry.status === 'APPROVED'
 </script>
 
 <template>
@@ -271,9 +274,9 @@ const editEntry = (id) => {
               <div v-if="isStaff" class="action-btn-group">
                 <button 
                   class="act-btn edit-btn" 
-                  :disabled="entry.status !== 'PENDING'" 
+                  :disabled="!canEditEntry(entry)" 
                   @click="editEntry(entry.id)"
-                  title="Modify pending entry">Edit</button>
+                  :title="entry.status === 'REJECTED' ? 'Revise rejected entry and resubmit it for review' : 'Modify pending entry'">Edit</button>
                 <div class="act-divider"></div>
                 <button 
                   class="act-btn delete-btn" 

@@ -21,7 +21,7 @@ class TimesheetController {
             date: t.entryDate.toString(),
             startTime: t.startTime.toString(),
             endTime: t.endTime.toString(),
-            task: t.taskType?.name,
+            task: t.taskType?.name ?: t.customTaskName,
             description: t.description,
             status: t.status.name(),
             reviewerRemarks: t.reviewerRemarks,
@@ -83,10 +83,10 @@ class TimesheetController {
             User currentUser = getAuthenticatedUser()
             def data = request.JSON
             
-            String taskName = data.task as String
-            def taskType = TaskType.findByName(taskName) ?: new TaskType(name: taskName).save(flush:true, failOnError:true)
+            String taskName = data.task?.toString()?.trim()
+            def taskType = taskName ? TaskType.findByName(taskName) : null
 
-            def timesheet = timesheetService.createTimesheet(data, currentUser, taskType)
+            def timesheet = timesheetService.createTimesheet(data, currentUser, taskType, taskName)
             
             render status: 201, text: ([success: true, data: buildTimesheetDTO(timesheet), message: 'Log added successfully'] as JSON)
 
@@ -105,12 +105,12 @@ class TimesheetController {
             def data = request.JSON
             
             TaskType taskType = null
+            String taskName = data.task?.toString()?.trim()
             if (data.task) {
-                String taskName = data.task as String
-                taskType = TaskType.findByName(taskName) ?: new TaskType(name: taskName).save(flush:true, failOnError:true)
+                taskType = TaskType.findByName(taskName)
             }
 
-            def timesheet = timesheetService.updateTimesheet(id, data, taskType, currentUser)
+            def timesheet = timesheetService.updateTimesheet(id, data, taskType, taskName, currentUser)
             render([success: true, data: buildTimesheetDTO(timesheet), message: 'Updated successfully'] as JSON)
 
         } catch (SecurityException e) {

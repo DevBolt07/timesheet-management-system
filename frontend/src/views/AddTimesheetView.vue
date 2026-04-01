@@ -27,7 +27,7 @@ onMounted(async () => {
     editingId.value = parseInt(route.query.editId, 10)
     
     const entry = entries.value.find(e => e.id === editingId.value)
-    if (entry && entry.status === 'PENDING') {
+    if (entry && (entry.status === 'PENDING' || entry.status === 'REJECTED')) {
        form.date = entry.date
        
        const startParsed = parse12Hour(entry.startTime)
@@ -79,45 +79,6 @@ const isSaving = ref(false)
 const hasSubmitted = ref(false)
 const globalErrorMsg = ref('')
 const successMsg = ref('')
-
-const showTaskModal = ref(false)
-const newTaskName = ref('')
-const isManagingTasks = ref(false)
-const taskManageError = ref('')
-
-const openManageTasks = () => {
-    showTaskModal.value = true
-    taskManageError.value = ''
-    newTaskName.value = ''
-}
-
-const submitNewTask = async () => {
-    if (!newTaskName.value.trim()) return
-    taskManageError.value = ''
-    try {
-        isManagingTasks.value = true
-        await store.addTaskType(newTaskName.value.trim())
-        newTaskName.value = ''
-    } catch(e) {
-        taskManageError.value = e.message || 'Failed to add task category. Name might already exist.'
-    } finally {
-        isManagingTasks.value = false
-    }
-}
-
-const removeTask = async (id, name) => {
-    if (!confirm(`Are you sure you want to remove the category '${name}'? Existing time records using this category will not be broken, it will simply be deactivated.`)) return
-    try {
-        isManagingTasks.value = true
-        taskManageError.value = ''
-        await store.deleteTaskType(id)
-        if (form.taskSelect === name) form.taskSelect = ''
-    } catch (e) {
-        taskManageError.value = e.message || 'Failed to safely remove category.'
-    } finally {
-        isManagingTasks.value = false
-    }
-}
 
 watch(() => form.taskText, (newVal) => {
   if (newVal) form.taskSelect = ''
@@ -228,11 +189,11 @@ const submitForm = async () => {
   
   try {
     isSaving.value = true
-    if (isEditMode.value) {
-       await store.updateEntry(editingId.value, state.payload)
-       successMsg.value = 'Timesheet entry successfully updated.'
-       setTimeout(() => router.push('/app/history'), 800)
-    } else {
+     if (isEditMode.value) {
+        await store.updateEntry(editingId.value, state.payload)
+        successMsg.value = 'Timesheet entry updated and resubmitted for review.'
+        setTimeout(() => router.push('/app/history'), 800)
+     } else {
        await store.addEntry(state.payload)
        successMsg.value = 'Timesheet entry successfully saved.'
        form.taskText = ''
@@ -377,10 +338,8 @@ const submitForm = async () => {
                   <option v-for="task in taskTypesList" :key="task.id" :value="task.name">{{ task.name }}</option>
                 </select>
               </div>
-              <button type="button" @click="openManageTasks" class="btn-manage-circle" title="Manage task categories" :disabled="isSaving">
-                <svg viewBox="0 0 24 24" fill="none" class="add-icon"><path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              </button>
             </div>
+            <span class="field-hint">Master task categories are maintained by Admin. Use Custom Entry only for approved one-off work not yet present in the list.</span>
           </div>
         </div>
         <div class="row-error" v-if="hasSubmitted && validationState.errors.task">{{ validationState.errors.task }}</div>
@@ -413,35 +372,6 @@ const submitForm = async () => {
       </div>
 
     </form>
-
-    <!-- TASK MANAGEMENT MODAL -->
-    <div v-if="showTaskModal" class="modal-overlay" @mousedown.self="showTaskModal = false">
-      <div class="modal-card">
-        <div class="modal-header">
-          <h3>Manage Task Categories</h3>
-          <button @click="showTaskModal = false" class="btn-close-modal">✕</button>
-        </div>
-        <div v-if="taskManageError" class="modal-error">{{ taskManageError }}</div>
-        <div class="add-task-form">
-          <input type="text" v-model="newTaskName" placeholder="New category name..." @keyup.enter="submitNewTask" :disabled="isManagingTasks" class="classic-input" />
-          <button @click="submitNewTask" class="blue-btn small-btn" :disabled="isManagingTasks || !newTaskName.trim()">
-            <span v-if="isManagingTasks" class="loader small-loader"></span>
-            <span v-else>ADD</span>
-          </button>
-        </div>
-        <div class="task-list">
-          <div v-for="task in taskTypesList" :key="task.id" class="task-item">
-            <span class="task-name">{{ task.name }}</span>
-            <button @click="removeTask(task.id, task.name)" class="btn-delete-task" title="Remove Category" :disabled="isManagingTasks">Delete</button>
-          </div>
-          <div v-if="taskTypesList.length === 0" class="empty-state">No master tasks defined.</div>
-        </div>
-        <div class="modal-actions-footer">
-          <button @click="showTaskModal = false" class="cancel-btn">Close</button>
-        </div>
-      </div>
-    </div>
-
   </div>
 </template>
 
@@ -785,6 +715,13 @@ textarea.classic-input {
   margin-top: 4px;
   font-weight: 500;
   display: block;
+}
+.field-hint {
+  color: var(--text-muted);
+  display: block;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  margin-top: 6px;
 }
 .row-error {
   color: #dc2626;

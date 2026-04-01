@@ -31,29 +31,6 @@ export const useTimesheetStore = defineStore('timesheet', () => {
     }
   }
 
-  const addTaskType = async (name) => {
-    try {
-      const resp = await apiClient.post('/api/taskTypes', { name })
-      // Push new task or Reactivated task into local list
-      if (!taskTypesList.value.find(t => t.id === resp.id)) {
-          taskTypesList.value.push(resp)
-      }
-      return resp
-    } catch (e) {
-      throw e
-    }
-  }
-
-  const deleteTaskType = async (id) => {
-    try {
-      await apiClient.delete(`/api/taskTypes/${id}`)
-      taskTypesList.value = taskTypesList.value.filter(t => t.id !== id)
-      return true
-    } catch (e) {
-      throw e
-    }
-  }
-
   const addEntry = async (entry) => {
     try {
       await apiClient.post('/api/timesheets', entry)
@@ -107,8 +84,6 @@ export const useTimesheetStore = defineStore('timesheet', () => {
     isError, 
     fetchEntries, 
     fetchTaskTypes,
-    addTaskType,
-    deleteTaskType,
     addEntry, 
     updateEntry, 
     deleteEntry,

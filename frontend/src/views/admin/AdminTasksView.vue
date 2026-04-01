@@ -29,11 +29,15 @@ const loadTasks = async () => {
 const addTask = async () => {
   addError.value = ''
   const name = newTaskName.value.trim()
-  if (!name) { addError.value = 'Task name cannot be empty.'; return }
+  if (!name) {
+    addError.value = 'Task name cannot be empty.'
+    return
+  }
+
   try {
     adding.value = true
-    const created = await apiClient.post('/api/admin/tasks', { name })
-    tasks.value.push(created)
+    await apiClient.post('/api/admin/tasks', { name })
+    await loadTasks()
     newTaskName.value = ''
   } catch (e) {
     addError.value = e.message
@@ -43,15 +47,18 @@ const addTask = async () => {
 }
 
 const deleteTask = async (task) => {
-  if (task.usageCount > 0) {
-    alert(`Cannot delete "${task.name}" — it is referenced by ${task.usageCount} timesheet record(s). Deactivation is a planned future feature.`)
-    return
-  }
-  if (!confirm(`Delete task category "${task.name}"?`)) return
+  const actionLabel = task.usageCount > 0 ? 'Deactivate' : 'Delete'
+  if (!confirm(`${actionLabel} task category "${task.name}"?`)) return
+
   try {
     deletingId.value = task.id
-    await apiClient.delete(`/api/admin/tasks/${task.id}`)
-    tasks.value = tasks.value.filter(t => t.id !== task.id)
+    const response = await apiClient.delete(`/api/admin/tasks/${task.id}`)
+
+    if (response?.data) {
+      tasks.value = tasks.value.map(t => (t.id === task.id ? response.data : t))
+    } else {
+      tasks.value = tasks.value.filter(t => t.id !== task.id)
+    }
   } catch (e) {
     alert('Delete failed: ' + e.message)
   } finally {
@@ -67,19 +74,18 @@ const deleteTask = async (task) => {
       <p>Manage authoritative task categories used in staff timesheet submissions.</p>
     </div>
 
-    <!-- Add Task Form -->
     <div class="add-task-panel">
       <h4>Add New Category</h4>
       <div class="add-form">
         <input
-          type="text"
           v-model="newTaskName"
+          type="text"
           placeholder="e.g. External Training"
           class="task-input"
           @keyup.enter="addTask"
         />
         <button class="blue-btn" @click="addTask" :disabled="adding">
-          {{ adding ? 'Adding...' : '+ Add' }}
+          {{ adding ? 'Saving...' : '+ Add' }}
         </button>
       </div>
       <p v-if="addError" class="add-error">{{ addError }}</p>
@@ -95,7 +101,7 @@ const deleteTask = async (task) => {
             <th>#</th>
             <th>Category Name</th>
             <th>Usage Count</th>
-            <th>Safety Status</th>
+            <th>Status</th>
             <th class="center">Action</th>
           </tr>
         </thead>
@@ -109,17 +115,18 @@ const deleteTask = async (task) => {
               </span>
             </td>
             <td>
-              <span v-if="t.usageCount > 0" class="badge-locked">In Use</span>
-              <span v-else class="badge-safe">Safe to Delete</span>
+              <span v-if="!t.isActive" class="badge-inactive">Inactive</span>
+              <span v-else-if="t.usageCount > 0" class="badge-locked">In Use</span>
+              <span v-else class="badge-safe">Active</span>
             </td>
             <td class="center">
               <button
                 class="del-btn"
-                :disabled="deletingId === t.id"
+                :disabled="deletingId === t.id || !t.isActive"
+                :title="!t.isActive ? 'Category already inactive' : (t.usageCount > 0 ? 'Deactivate this category and hide it from future staff selection' : 'Delete this category permanently')"
                 @click="deleteTask(t)"
-                :title="t.usageCount > 0 ? 'Referenced by existing records — cannot delete' : 'Delete this category'"
               >
-                {{ deletingId === t.id ? '...' : 'Delete' }}
+                {{ deletingId === t.id ? '...' : (t.usageCount > 0 ? 'Deactivate' : 'Delete') }}
               </button>
             </td>
           </tr>
@@ -131,7 +138,7 @@ const deleteTask = async (task) => {
     </div>
 
     <div class="info-note">
-      ℹ️ Task categories referenced by existing timesheet records are protected. Deactivation (soft-delete) support is planned for a future release.
+      Task categories already used in timesheets are automatically deactivated instead of being hard-deleted, so historical records remain intact.
     </div>
   </div>
 </template>
@@ -165,8 +172,9 @@ const deleteTask = async (task) => {
 
 .badge-locked { background: #fef3c7; color: #b45309; padding: 3px 9px; border-radius: 12px; font-size: 0.72rem; font-weight: 700; }
 .badge-safe   { background: #dcfce7; color: #166534; padding: 3px 9px; border-radius: 12px; font-size: 0.72rem; font-weight: 700; }
+.badge-inactive { background: #e2e8f0; color: #475569; padding: 3px 9px; border-radius: 12px; font-size: 0.72rem; font-weight: 700; }
 
-.del-btn { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; font-size: 0.78rem; font-weight: 600; padding: 4px 10px; border-radius: 4px; cursor: pointer; transition: background 0.15s; }
+.del-btn { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; font-size: 0.78rem; font-weight: 600; padding: 4px 10px; border-radius: 4px; cursor: pointer; transition: background 0.15s; min-width: 88px; }
 .del-btn:hover:not(:disabled) { background: #fecaca; }
 .del-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
