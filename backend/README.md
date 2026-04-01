@@ -1,113 +1,159 @@
-# Timesheet Management System - Backend API
+# Backend - Collegiate ERP Suite Timesheet API
 
-This is the Grails 6 REST API profile backend for the College ERP Timesheet module.
+This directory contains the Grails 6 REST API for the Timesheet Management module. It powers staff entry workflows, HOD approvals, admin oversight, task master management, and demo identity resolution.
 
-## Tech Stack
-- **Framework:** Grails 6.1.0 (REST API Profile)
-- **Language:** Groovy / Java
-- **Database:** MySQL 8+
-- **ORM:** GORM (Grails Object Relational Mapping)
+## Backend Responsibilities
+The backend currently handles:
 
-## Setup & Running the Application
+- seeded demo users and task master data
+- demo login endpoint for role-aware session context
+- identity resolution for current user context
+- role-based authorization for staff, HOD, and admin
+- timesheet CRUD operations
+- approval/rejection workflow
+- reviewer remarks persistence
+- task master management
+- admin metrics, oversight, and user visibility
 
-### 1. Database Configuration
-Ensure MySQL is running on your local machine on port `3306`. Create the database:
+## Technology Stack
+- Grails 6
+- Groovy
+- Spring Boot REST profile
+- GORM
+- MySQL 8
+
+## Core Domain Models
+- `User`: seeded staff, HOD, and admin accounts
+- `TaskType`: task master categories used by timesheets
+- `Timesheet`: transactional timesheet records with workflow status
+
+## Workflow Rules Enforced
+### Staff
+- can create timesheets
+- can view only their own logs
+- can edit/delete only pending entries
+
+### HOD
+- can review pending timesheets
+- can approve/reject with remarks
+- can access department/global review-oriented logs as currently configured
+
+### Admin
+- can access admin-only metrics and oversight endpoints
+- can inspect users and task master data
+- can manage task categories safely
+
+## API Areas
+### Authentication
+- `POST /api/auth/demo-login`
+
+### Timesheets
+- `GET /api/timesheets`
+- `GET /api/timesheets/{id}`
+- `POST /api/timesheets`
+- `PUT /api/timesheets/{id}`
+- `DELETE /api/timesheets/{id}`
+- `PUT /api/timesheets/{id}/review`
+
+### Task Master
+- `GET /api/taskTypes`
+- `POST /api/taskTypes`
+- `DELETE /api/taskTypes/{id}`
+
+### Admin
+- `GET /api/admin/metrics`
+- `GET /api/admin/timesheets`
+- `GET /api/admin/users`
+- `GET /api/admin/tasks`
+- `POST /api/admin/tasks`
+- `DELETE /api/admin/tasks/{id}`
+
+### Staff Directory Support
+- endpoints used to support HOD/admin reporting and filtering where implemented
+
+## Demo Seeded Accounts
+These users are seeded through bootstrap logic and intended for development/demo use:
+
+| Role | Username | Password |
+|---|---|---|
+| Staff | `dipak.pawar` | `staff123` |
+| Staff | `kavita.deshmukh` | `staff123` |
+| Staff | `rahul.verma` | `staff123` |
+| HOD / Manager | `dr.sharma` | `manager123` |
+| Admin | `system.admin` | `admin123` |
+
+## Database Setup
+### 1. Create MySQL database
 ```sql
 CREATE DATABASE timesheet_db;
 ```
-*(Update `grails-app/conf/application.yml` with your local MySQL username and password if it differs from the defaults).*
 
-### 2. Starting the Backend Server
-Open a terminal in the `backend` directory and run the Gradle boot wrapper:
+### 2. Configure datasource
+Update:
+
+`grails-app/conf/application.yml`
+
+Make sure the following match your local environment:
+- database host
+- port
+- username
+- password
+- database name
+
+## Running the Backend
+### Windows
 ```bash
-# On Windows
-.\gradlew.bat bootRun
+cd backend
+gradlew.bat bootRun
+```
 
-# On Mac/Linux
+### macOS / Linux
+```bash
+cd backend
 ./gradlew bootRun
 ```
-The server will start at: `http://localhost:8080`
 
----
+Backend default URL:
 
-## Implemented API Endpoints
+```text
+http://localhost:8080
+```
 
-The system relies on a set of RESTful APIs to connect with the Vue.js frontend. All responses are returned in `application/json`.
+## Important Development Note
+Bootstrap-based seed data runs during application startup. If you change:
 
-### 1. Task Types API
-Used to dynamically fetch available administrative and academic task types for the frontend form dropdowns.
+- seeded users
+- demo credentials
+- task master defaults
+- bootstrap logic
 
-- **URL:** `/api/taskTypes`
-- **Method:** `GET`
-- **Response:**
-  ```json
-  [
-    {"id": 1, "name": "Academic Planning"},
-    {"id": 2, "name": "Student Mentoring"}
-  ]
-  ```
+restart the backend so the changes are applied.
 
-### 2. Timesheet API (CRUD)
+## Backend Validation Highlights
+- required date/time/task/description checks
+- future date prevention where applicable
+- overlap validation for timesheet entries
+- pending-only update/delete workflow
+- pending-only review workflow
+- task master integrity checks
+- admin-only endpoint protection
 
-#### 2.1 Get All Timesheet Logs
-Fetches all timesheet records for the current user.
+## Current Backend Status
+### Implemented
+- seeded demo auth flow
+- identity resolution service
+- role-aware timesheet service/controller logic
+- HOD review endpoint
+- admin metrics and oversight support
+- task master management
 
-- **URL:** `/api/timesheets`
-- **Method:** `GET`
-- **Response:**
-  ```json
-  [
-    {
-      "id": 1,
-      "date": "2026-03-30",
-      "startTime": "09:00:00",
-      "endTime": "11:30:00",
-      "task": "Academic Planning",
-      "description": "Prepared syllabus for next semester.",
-      "status": "PENDING"
-    }
-  ]
-  ```
+### Planned Next
+- leave management domain and workflow
+- better automated tests
+- environment-based configuration hardening
+- replacement of demo auth with real ERP auth integration
 
-#### 2.2 Create a New Timesheet
-Logs a new timesheet entry. Validations prevent future-dated entries and overlap.
-
-- **URL:** `/api/timesheets`
-- **Method:** `POST`
-- **Payload:**
-  ```json
-  {
-      "date": "2026-03-30",
-      "startTime": "09:00:00",
-      "endTime": "11:30:00",
-      "task": "Academic Planning",
-      "description": "Prepared syllabus for next semester."
-  }
-  ```
-
-#### 2.3 Update an Existing Timesheet
-Updates a specific timesheet entry provided the status is still `PENDING`.
-
-- **URL:** `/api/timesheets/{id}`
-- **Method:** `PUT`
-- **Payload:** *(Same as POST)*
-
-#### 2.4 Delete a Timesheet
-Removes a specific timesheet entry provided the status is still `PENDING`.
-
-- **URL:** `/api/timesheets/{id}`
-- **Method:** `DELETE`
-- **Response:** `204 No Content` on success.
-
----
-
-## Domain Models
-The backend logic is driven by the following GORM domain classes located in `grails-app/domain/timesheet/api/`:
-- **`User`**: Base user entity to store staff/manager credentials.
-- **`TaskType`**: Master data table supplying tasks to dropdowns.
-- **`Timesheet`**: The primary transaction table storing staff logged hours, heavily validated via domain constraints.
-
-## Future Developments
-- Implementing Spock unit tests for `TimesheetService`.
-- Integrating Spring Security REST for JWT-based auth and assigning users strictly via token.
-- Building the `/api/manager/timesheets` endpoints for HOD bulk approvals.
+## Troubleshooting
+- If login fails for seeded users, restart the backend so bootstrap user sync runs.
+- If task categories or demo users appear outdated, verify bootstrap logic has run after changes.
+- If the frontend cannot access the API, confirm the backend is running on port `8080`.

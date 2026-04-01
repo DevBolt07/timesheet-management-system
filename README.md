@@ -1,30 +1,73 @@
-# Staff Timesheet Management System
+# Collegiate ERP Suite - Timesheet Management Module
 
-An industry-oriented full-stack timesheet module for academic ERP workflows. The system is designed for college staff to log daily work entries, track activity history, and support an approval flow that can later be extended for HOD and admin operations.
+An industry-oriented ERP module for college staff productivity tracking, managerial approvals, and administrative oversight. This project is being built as a reusable sub-system that can later integrate into a larger institutional ERP or college website platform.
 
-## Overview
-This project is structured as a decoupled frontend and backend application:
+## Project Overview
+This repository currently contains a fully working Timesheet Management module with role-aware workflows for:
 
-- `frontend`: Vue 3 application for dashboard, timesheet entry, and history screens
-- `backend`: Grails 6 REST API for timesheet management, validation, and persistence
+- `STAFF` users who log and manage their own timesheet entries
+- `HOD` users who review, approve, and reject staff submissions
+- `ADMIN` users who oversee timesheet data, users, and task master records
 
-The current implementation already covers the core timesheet domain and CRUD flow. The next major milestone is replacing frontend mock state with live API integration and then extending the module into a full role-based workflow.
+The project is structured as a decoupled full-stack application:
 
-## Core Features
-- Staff dashboard with quick metrics
-- Timesheet entry form with client-side validation
-- Timesheet history view
-- Grails REST API for create, read, update, and delete operations
-- MySQL persistence through GORM domain models
-- Business validation for invalid time ranges and overlapping time entries
-- Domain foundation for role-based workflow through `User`, `TaskType`, and `Timesheet`
+- `frontend`: Vue 3 + Vite single-page application
+- `backend`: Grails 6 REST API
+- `database`: MySQL 8
 
-## Tech Stack
+For implementation-specific details, refer to:
+
+- `frontend/README.md`
+- `backend/README.md`
+
+## Current Functional Scope
+### 1. Staff Workflow
+- Secure demo login using seeded user accounts
+- Add new timesheet entries
+- 12-hour time entry with AM/PM support
+- Real-time and backend validation for date, time, task, and description
+- Overlap protection against conflicting time entries
+- View personal timesheet history
+- Search and filter personal logs
+- Edit or delete only `PENDING` entries
+- View final status (`PENDING`, `APPROVED`, `REJECTED`)
+- View reviewer remarks on reviewed entries
+
+### 2. HOD / Manager Workflow
+- Secure demo login using seeded HOD account
+- Dedicated review workspace for pending approvals
+- Approve or reject timesheet entries
+- Add reviewer remarks during approval workflow
+- Department-style logs view
+- Staff-wise filtering support
+- Staff-level summary visibility for reporting and review
+
+### 3. Admin Workflow
+- Secure demo login using seeded admin account
+- Admin dashboard with system-level metrics
+- Full timesheet oversight across users
+- User directory / role visibility
+- Task master management
+- Task usage visibility and protected delete behavior
+
+## Key Features Implemented
+- Role-aware seeded demo login
+- Backend identity resolution abstraction
+- Staff / HOD / Admin navigation separation
+- Task master seeding and controlled task creation
+- Safe task delete / deactivate behavior
+- Review workflow with remarks
+- Consistent JSON API response handling
+- AM/PM-friendly display in logs and review flows
+- Search, status, date, and staff filters in operational views
+- Admin governance layer for system oversight
+
+## Technology Stack
 - Frontend: Vue 3, Vite, Pinia, Vue Router, Vanilla CSS
 - Backend: Grails 6, Groovy, Spring Boot REST profile
 - Database: MySQL 8, GORM
 
-## Project Structure
+## Repository Structure
 ```text
 timesheet/
 |-- frontend/
@@ -33,8 +76,10 @@ timesheet/
 |   |   |-- components/
 |   |   |-- layouts/
 |   |   |-- router/
+|   |   |-- services/
 |   |   |-- stores/
 |   |   `-- views/
+|   |       `-- admin/
 |   |-- package.json
 |   `-- vite.config.js
 |-- backend/
@@ -42,6 +87,7 @@ timesheet/
 |   |   |-- conf/
 |   |   |-- controllers/
 |   |   |-- domain/
+|   |   |-- init/
 |   |   `-- services/
 |   |-- src/
 |   |-- build.gradle
@@ -50,29 +96,16 @@ timesheet/
 `-- README.md
 ```
 
-## Current Functional Scope
-### Frontend
-- Dashboard page
-- Log Time page
-- History page
-- Pinia-based mock state for timesheet entries
+## Demo Login Credentials
+The current build uses seeded demo accounts for realistic role-based testing.
 
-### Backend
-- `Timesheet` domain model
-- `User` and `TaskType` supporting models
-- REST endpoints for timesheet CRUD
-- Service-layer validation for:
-  - end time must be after start time
-  - overlapping entries are rejected
-
-## API Endpoints
-| Method | Endpoint | Purpose |
+| Role | Username | Password |
 |---|---|---|
-| `GET` | `/api/timesheets` | Fetch all timesheet entries |
-| `GET` | `/api/timesheets/{id}` | Fetch a single timesheet entry |
-| `POST` | `/api/timesheets` | Create a new timesheet entry |
-| `PUT` | `/api/timesheets/{id}` | Update a pending timesheet entry |
-| `DELETE` | `/api/timesheets/{id}` | Delete a pending timesheet entry |
+| Staff | `dipak.pawar` | `staff123` |
+| Staff | `kavita.deshmukh` | `staff123` |
+| Staff | `rahul.verma` | `staff123` |
+| HOD / Manager | `dr.sharma` | `manager123` |
+| Admin | `system.admin` | `admin123` |
 
 ## Local Setup
 ### Prerequisites
@@ -81,131 +114,110 @@ timesheet/
 - MySQL 8+
 
 ### 1. Create the database
-Open MySQL and create the project database:
-
 ```sql
 CREATE DATABASE timesheet_db;
 ```
 
 ### 2. Configure backend database access
-Update the MySQL connection values in:
+Update the MySQL connection details in:
 
 `backend/grails-app/conf/application.yml`
 
-Make sure the configured username, password, and database name match your local MySQL setup before starting the backend.
+Make sure username, password, host, and database name match your local MySQL setup.
 
 ## Run the Project
-Use two separate terminals: one for the backend and one for the frontend.
+Use two terminals.
 
-### Start the backend
-1. Open a terminal in the project root
-2. Move to the backend folder:
-
+### Backend
 ```bash
 cd backend
-```
-
-3. Start the Grails application:
-
-```bash
 gradlew.bat bootRun
 ```
 
-4. Wait until the application finishes booting
-5. Confirm the API is available at:
+Backend default URL:
 
 ```text
 http://localhost:8080
 ```
 
-Example API endpoint:
-
-```text
-http://localhost:8080/api/timesheets
-```
-
-### Start the frontend
-1. Open a second terminal in the project root
-2. Move to the frontend folder:
-
+### Frontend
 ```bash
 cd frontend
-```
-
-3. Install dependencies if this is your first run:
-
-```bash
 npm install
-```
-
-4. Start the Vite development server:
-
-```bash
 npm run dev
 ```
 
-5. Open the frontend in the browser:
+Frontend default URL:
 
 ```text
 http://localhost:5173
 ```
 
-## Quick Start Commands
-If you are already inside the project root, the fastest startup flow is:
+## Core API Areas
+### Authentication
+- `POST /api/auth/demo-login`
 
-### Terminal 1
-```bash
-cd backend
-gradlew.bat bootRun
-```
+### Timesheets
+- `GET /api/timesheets`
+- `GET /api/timesheets/{id}`
+- `POST /api/timesheets`
+- `PUT /api/timesheets/{id}`
+- `DELETE /api/timesheets/{id}`
+- `PUT /api/timesheets/{id}/review`
 
-### Terminal 2
-```bash
-cd frontend
-npm install
-npm run dev
-```
+### Task Master
+- `GET /api/taskTypes`
+- `POST /api/taskTypes`
+- `DELETE /api/taskTypes/{id}`
 
-## Run Checklist
-Before testing the project, make sure:
+### Admin
+- `GET /api/admin/metrics`
+- `GET /api/admin/timesheets`
+- `GET /api/admin/users`
+- `GET /api/admin/tasks`
+- `POST /api/admin/tasks`
+- `DELETE /api/admin/tasks/{id}`
 
-- MySQL is running
-- `timesheet_db` exists
-- backend credentials in `application.yml` are correct
-- backend is running on `http://localhost:8080`
-- frontend is running on `http://localhost:5173`
+## Current Implementation Status
+### Completed
+- Staff timesheet entry workflow
+- Staff history and filtering
+- Pending-only edit/delete rules
+- HOD approval/rejection workflow
+- Reviewer remarks flow
+- Seeded demo login with multiple accounts
+- Admin dashboard and oversight foundation
+- Task master control
+- Role-aware navigation and route protection
 
-## Troubleshooting
-- If the backend does not start, first verify Java and MySQL are installed and running correctly
-- If database connection fails, recheck `backend/grails-app/conf/application.yml`
-- If the frontend starts but shows no live backend data, that is currently expected because the frontend still uses mock Pinia state
-- If `npm install` fails, confirm that Node.js 20+ is installed
+### In Progress / Planned Next
+- Leave Management module
+- Broader admin configuration modules
+- Better reporting and analytics
+- Integration-ready auth replacement for real ERP SSO/JWT
+- Deployment/staging configuration hardening
+- Automated service/controller test coverage
 
-## Current Status
-- Frontend UI is implemented and navigable
-- Frontend still uses mock Pinia state instead of live API calls
-- Backend CRUD and domain validation are implemented
-- Role-based authentication and approval workflow are not implemented yet
+## Business Workflow Summary
+1. Staff logs a timesheet entry
+2. Entry is stored in `PENDING` status
+3. Staff can edit/delete only while it remains pending
+4. HOD reviews pending entries
+5. HOD approves or rejects with optional remarks
+6. Final status is reflected in staff history
+7. Admin can oversee the full system state
 
-## Recommended Next Milestones
-1. Replace mock Pinia data with live API integration
-2. Add centralized API client and error handling in the frontend
-3. Implement edit and delete actions in the history screen
-4. Add authentication and role-based access for `STAFF` and `HOD`
-5. Build HOD approval and rejection workflow
-6. Add test coverage for service validation and API behavior
+## Notes for Review
+- This is a role-aware ERP module prototype intended for institutional integration, not a standalone public consumer app.
+- Demo authentication is intentionally seeded and controlled for evaluation and workflow testing.
+- The architecture is being shaped so the current identity layer can later be replaced with the company's real authentication system.
 
-## Domain Direction
-This module is intended to evolve into a broader ERP-style staff productivity and approval system for educational institutions. The current codebase should be treated as the foundation for:
+## Recommended Next Phase
+The next major module planned after stabilizing the current Timesheet system is:
 
-- staff self-service logging
-- department-level review and approval
-- auditability of submitted work hours
-- future reporting and anomaly detection
+- `Leave Management`
 
-## Notes
-- The root project contains `frontend` and `backend` folders. Older names such as `timesheet-app` and `timesheet-api` are not used in this repository.
-- The backend currently creates fallback demo data for user and task type where required. This is temporary until authentication and seeded master data are added.
+That module will reuse the same staff / HOD / admin workflow foundation established here.
 
-## License
-This project is currently intended for academic and industry demonstration purposes.
+## License / Usage
+This repository is currently intended for academic, demo, and industry-review purposes.
