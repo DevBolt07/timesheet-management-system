@@ -8,6 +8,7 @@ class Timesheet {
     LocalTime startTime
     LocalTime endTime
     String description
+    String reviewerRemarks
     Status status = Status.PENDING
 
     static belongsTo = [user: User, taskType: TaskType]
@@ -17,6 +18,7 @@ class Timesheet {
         startTime nullable: false
         endTime nullable: false
         description nullable: true
+        reviewerRemarks nullable: true
         status nullable: false
     }
 }

@@ -56,8 +56,8 @@ export const useTimesheetStore = defineStore('timesheet', () => {
 
   const addEntry = async (entry) => {
     try {
-      const newEntry = await apiClient.post('/api/timesheets', entry)
-      entries.value.unshift(newEntry)
+      await apiClient.post('/api/timesheets', entry)
+      await fetchEntries() // Re-sync to enforce backend sequence map
       return true
     } catch (e) {
       throw e
@@ -66,11 +66,8 @@ export const useTimesheetStore = defineStore('timesheet', () => {
 
   const updateEntry = async (id, entry) => {
     try {
-      const updatedEntry = await apiClient.put(`/api/timesheets/${id}`, entry)
-      const index = entries.value.findIndex(e => e.id === id)
-      if (index !== -1) {
-        entries.value[index] = updatedEntry
-      }
+      await apiClient.put(`/api/timesheets/${id}`, entry)
+      await fetchEntries() // Reliable sync resolving any secondary status side-effects
       return true
     } catch (e) {
       throw e
@@ -81,10 +78,25 @@ export const useTimesheetStore = defineStore('timesheet', () => {
     try {
       isError.value = null
       await apiClient.delete(`/api/timesheets/${id}`)
-      entries.value = entries.value.filter(e => e.id !== id)
+      await fetchEntries()
       return true
     } catch (e) {
       isError.value = e.message || 'Failed to delete'
+      throw e
+    }
+  }
+
+  const reviewEntry = async (id, statusPayload) => {
+    try {
+      const resp = await apiClient.put(`/api/timesheets/${id}/review`, statusPayload)
+      // Opt to map exact DTO payload dynamically substituting old reference safely
+      const index = entries.value.findIndex(e => e.id === id)
+      if (index !== -1) {
+         entries.value[index] = resp
+      }
+      return resp
+    } catch (e) {
+      throw e
     }
   }
 
@@ -99,6 +111,7 @@ export const useTimesheetStore = defineStore('timesheet', () => {
     deleteTaskType,
     addEntry, 
     updateEntry, 
-    deleteEntry 
+    deleteEntry,
+    reviewEntry 
   }
 })

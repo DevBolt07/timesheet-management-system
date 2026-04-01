@@ -26,6 +26,11 @@ const router = createRouter({
           path: 'history',
           name: 'history',
           component: ViewTimesheetView,
+        },
+        {
+          path: 'review',
+          name: 'review',
+          component: () => import('@/views/ReviewTimesheetView.vue')
         }
       ]
     }

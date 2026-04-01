@@ -1,16 +1,68 @@
 <script setup>
 import { reactive, ref, computed, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useTimesheetStore } from '@/stores/timesheetStore'
 import { storeToRefs } from 'pinia'
 
 const store = useTimesheetStore()
-const { taskTypesList } = storeToRefs(store)
+const { taskTypesList, entries } = storeToRefs(store)
+const route = useRoute()
+const router = useRouter()
 
-onMounted(() => {
+const isEditMode = ref(false)
+const editingId = ref(null)
+
+onMounted(async () => {
   if (taskTypesList.value.length === 0) {
-    store.fetchTaskTypes()
+    await store.fetchTaskTypes()
+  }
+  
+  if (entries.value.length === 0) {
+    await store.fetchEntries()
+  }
+
+  // Handle Edit Population
+  if (route.query.editId) {
+    isEditMode.value = true
+    editingId.value = parseInt(route.query.editId, 10)
+    
+    const entry = entries.value.find(e => e.id === editingId.value)
+    if (entry && entry.status === 'PENDING') {
+       form.date = entry.date
+       
+       const startParsed = parse12Hour(entry.startTime)
+       form.startH = startParsed.h
+       form.startM = startParsed.m
+       form.startA = startParsed.a
+       
+       const endParsed = parse12Hour(entry.endTime)
+       form.endH = endParsed.h
+       form.endM = endParsed.m
+       form.endA = endParsed.a
+       
+       form.description = entry.description
+       // Check if task exists in master list, otherwise it must have been a manual text
+       if (taskTypesList.value.find(t => t.name === entry.task)) {
+           form.taskSelect = entry.task
+       } else {
+           form.taskText = entry.task
+       }
+    } else {
+       // Invalid edit request or locked status
+       router.replace('/app/history')
+    }
   }
 })
+
+// Time Helpers
+const parse12Hour = (time24) => {
+  if (!time24) return { h: '09', m: '00', a: 'AM' }
+  let [h, m] = time24.split(':')
+  let hrs = parseInt(h, 10)
+  let a = hrs >= 12 ? 'PM' : 'AM'
+  hrs = hrs % 12 || 12
+  return { h: String(hrs).padStart(2, '0'), m: m, a: a }
+}
 
 // UI Form State
 const form = reactive({
@@ -185,15 +237,21 @@ const submitForm = async () => {
   
   try {
     isSaving.value = true
-    await store.addEntry(state.payload)
-    successMsg.value = 'Timesheet entry successfully saved.'
-    
-    // Reset Form purely
-    form.taskText = ''
-    form.taskSelect = ''
-    form.description = ''
-    form.isLastTask = false
-    hasSubmitted.value = false 
+    if (isEditMode.value) {
+       await store.updateEntry(editingId.value, state.payload)
+       successMsg.value = 'Timesheet entry successfully updated.'
+       setTimeout(() => router.push('/app/history'), 800)
+    } else {
+       await store.addEntry(state.payload)
+       successMsg.value = 'Timesheet entry successfully saved.'
+       
+       // Reset Form purely
+       form.taskText = ''
+       form.taskSelect = ''
+       form.description = ''
+       form.isLastTask = false
+       hasSubmitted.value = false 
+    }
   } catch (e) {
     globalErrorMsg.value = e.message || 'System error: Failed to save record.'
   } finally {
@@ -205,7 +263,7 @@ const submitForm = async () => {
 <template>
   <div class="erp-add-view">
     <div class="header-strip">
-      Add Timesheet
+      {{ isEditMode ? 'Modify Timesheet Entry' : 'Add Timesheet' }}
     </div>
 
     <div class="note-text-container">
@@ -329,9 +387,12 @@ const submitForm = async () => {
 
       <!-- Submit Footer -->
       <div class="form-actions">
+        <!-- Optional cancel button for edits -->
+        <button v-if="isEditMode" type="button" @click="router.push('/app/history')" class="cancel-link" :disabled="isSaving">Cancel</button>
+
         <button type="submit" class="blue-btn" :disabled="isSaving">
           <span v-if="isSaving" class="btn-flex"><span class="loader"></span> Saving...</span>
-          <span v-else>SAVE ENTRY</span>
+          <span v-else>{{ isEditMode ? 'UPDATE ENTRY' : 'SAVE ENTRY' }}</span>
         </button>
       </div>
 
@@ -694,7 +755,22 @@ textarea.classic-input {
   text-align: center;
   margin-top: 32px;
   padding-top: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
 }
+
+.cancel-link {
+  background: transparent;
+  border: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.cancel-link:hover { color: #0f172a; }
 
 .blue-btn {
   background-color: #1d4ed8;

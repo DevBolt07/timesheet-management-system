@@ -1,11 +1,17 @@
 <script setup>
 import { RouterLink, RouterView, useRoute } from 'vue-router'
 
+import { useAuthStore } from '@/stores/authStore'
+import { storeToRefs } from 'pinia'
+
 const route = useRoute()
+const authStore = useAuthStore()
+const { currentUser, isManager, isStaff } = storeToRefs(authStore)
 
 const breadcrumbMap = {
   '/app/history': 'Timesheet Logs',
   '/app/log-time': 'Log New Timesheet',
+  '/app/review': 'Review Pending Approvals'
 }
 
 const getBreadcrumb = () => {
@@ -23,10 +29,11 @@ const getBreadcrumb = () => {
       </div>
       <div class="sys-profile">
         <div class="profile-details">
-          <span class="user-name">Dipak Pawar</span>
-          <span class="user-role">Dept of Computer Engineering</span>
+          <span class="user-name">{{ currentUser?.name || 'Unrecognized Staff' }}</span>
+          <span class="user-role">{{ currentUser?.department || 'Unassigned Dept' }}</span>
+          <button class="logout-link" @click="authStore.logout()">Exit Demo Session</button>
         </div>
-        <div class="profile-avatar">DP</div>
+        <div class="profile-avatar">{{ currentUser?.name ? currentUser.name.charAt(0) : 'U' }}</div>
       </div>
     </header>
 
@@ -42,19 +49,33 @@ const getBreadcrumb = () => {
 
     <!-- Main Workspace -->
     <div class="workspace-area">
-      <!-- Side Navigation -->
       <aside class="sidebar-nav">
-        <p class="nav-heading">Timesheet Operations</p>
-        <nav class="nav-menu">
-          <RouterLink to="/app/history" class="nav-item" active-class="nav-active">
-            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-            Master Logs
-          </RouterLink>
-          <RouterLink to="/app/log-time" class="nav-item" active-class="nav-active">
-            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-            Add Timesheet
-          </RouterLink>
-        </nav>
+        <template v-if="isStaff">
+          <p class="nav-heading">Timesheet Operations</p>
+          <nav class="nav-menu">
+            <RouterLink to="/app/history" class="nav-item" active-class="nav-active">
+              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+              Master Logs
+            </RouterLink>
+            <RouterLink to="/app/log-time" class="nav-item" active-class="nav-active">
+              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+              Add Timesheet
+            </RouterLink>
+          </nav>
+        </template>
+        <template v-if="isManager">
+          <p class="nav-heading">Manager Operations</p>
+          <nav class="nav-menu">
+            <RouterLink to="/app/review" class="nav-item" active-class="nav-active">
+              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+              Review Approvals
+            </RouterLink>
+            <RouterLink to="/app/history" class="nav-item" active-class="nav-active">
+              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+              Department Logs
+            </RouterLink>
+          </nav>
+        </template>
       </aside>
 
       <!-- Content Region -->
@@ -126,6 +147,20 @@ const getBreadcrumb = () => {
 .user-role {
   font-size: 0.75rem;
   color: var(--text-muted);
+}
+
+.logout-link {
+  font-size: 0.70rem;
+  color: var(--primary-color);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin-top: 2px;
+  font-weight: 500;
+}
+.logout-link:hover {
+  text-decoration: underline;
 }
 
 .profile-avatar {
