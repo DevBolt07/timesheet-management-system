@@ -262,27 +262,26 @@ const submitForm = async () => {
 
 <template>
   <div class="erp-add-view">
-    <div class="header-strip">
-      {{ isEditMode ? 'Modify Timesheet Entry' : 'Add Timesheet' }}
-    </div>
 
-    <div class="note-text-container">
-      <div class="note-text">
-        NOTE : Please Select the Status as Yes / No for the field - " Are you adding your last task of the day? "<br/>
-        This selection affects daily timesheet submission status report.
+    <!-- Panel Header -->
+    <div class="panel-header">
+      <div class="panel-header-left">
+        <h2 class="panel-title">{{ isEditMode ? 'Modify Timesheet Entry' : 'Add Timesheet Entry' }}</h2>
+        <p class="panel-note">Complete all required fields. Select <strong>Yes</strong> for "Last task of the day" to mark daily completion.</p>
       </div>
+      <div v-if="isEditMode" class="edit-mode-badge">Edit Mode</div>
     </div>
 
     <!-- Global State Banner -->
     <div v-if="globalErrorMsg" class="form-feedback error">
-      <span class="fb-icon">⚠</span> 
+      <span class="fb-icon">⚠</span>
       <div>
         <strong>Submission Failed:</strong>
         <p>{{ globalErrorMsg }}</p>
       </div>
     </div>
     <div v-if="successMsg" class="form-feedback success">
-      <span class="fb-icon">✓</span> 
+      <span class="fb-icon">✓</span>
       <div>
         <strong>Success:</strong>
         <p>{{ successMsg }}</p>
@@ -290,160 +289,635 @@ const submitForm = async () => {
     </div>
 
     <form @submit.prevent="submitForm" class="erp-form" novalidate>
-      
-      <!-- Row 1: Date & Time Logic -->
-      <div class="form-row">
-        <!-- Date Block -->
-        <div class="input-block date-block" :class="{ 'has-field-error': hasSubmitted && validationState.errors.date }">
-          <label>Date <span class="req">*</span></label>
-          <div class="input-wrapper">
-             <input type="date" v-model="form.date" class="classic-input clean-date" :disabled="isSaving" />
-          </div>
-          <span class="field-error" v-if="hasSubmitted && validationState.errors.date">{{ validationState.errors.date }}</span>
-        </div>
-        
-        <!-- Explicit AM/PM Start Time -->
-        <div class="input-block time-block" :class="{ 'has-field-error': hasSubmitted && validationState.errors.time }">
-          <label>Start Time (12H) <span class="req">*</span></label>
-          <div class="time-selectors">
-            <select v-model="form.startH" class="time-part" :disabled="isSaving">
-              <option v-for="h in hours" :key="'sh'+h" :value="h">{{ h }}</option>
-            </select>
-            <span class="colon">:</span>
-            <input type="text" inputmode="numeric" maxlength="2" placeholder="00" :value="form.startM" @input="cleanMinute('startM', $event)" class="time-part min-input" :disabled="isSaving" @blur="padMinute('startM')" autocomplete="off" />
-            <select v-model="form.startA" class="time-ampm" :disabled="isSaving">
-              <option v-for="a in ampm" :key="'sa'+a" :value="a">{{ a }}</option>
-            </select>
-          </div>
-        </div>
-        
-        <!-- Explicit AM/PM End Time -->
-        <div class="input-block time-block" :class="{ 'has-field-error': hasSubmitted && validationState.errors.time }">
-          <label>End Time (12H) <span class="req">*</span></label>
-          <div class="time-selectors">
-            <select v-model="form.endH" class="time-part" :disabled="isSaving">
-              <option v-for="h in hours" :key="'eh'+h" :value="h">{{ h }}</option>
-            </select>
-            <span class="colon">:</span>
-            <input type="text" inputmode="numeric" maxlength="2" placeholder="00" :value="form.endM" @input="cleanMinute('endM', $event)" class="time-part min-input" :disabled="isSaving" @blur="padMinute('endM')" autocomplete="off" />
-            <select v-model="form.endA" class="time-ampm" :disabled="isSaving">
-              <option v-for="a in ampm" :key="'ea'+a" :value="a">{{ a }}</option>
-            </select>
-          </div>
-        </div>
-        
-        <!-- Checkbox -->
-        <div class="input-block checkbox-block">
-          <label class="checkbox-label" :class="{ 'disabled-text': isSaving }">
-            <input type="checkbox" v-model="form.isLastTask" :disabled="isSaving" class="erp-checkbox" />
-            Are you adding your last task of the day?
-          </label>
-        </div>
-      </div>
-      
-      <!-- Time Cross-validation Error -->
-      <div class="row-error" v-if="hasSubmitted && validationState.errors.time">{{ validationState.errors.time }}</div>
 
-      <!-- Row 2: Task Division "OR" -->
-      <div class="form-row align-center task-row">
-        <div class="input-block flex-1" :class="{ 'has-field-error': hasSubmitted && validationState.errors.task }">
-          <label>Task <span class="req">*</span></label>
-          <div class="input-wrapper">
-             <input type="text" v-model="form.taskText" placeholder="Custom task entry..." class="classic-input" :disabled="isSaving" />
+      <!-- Section: Date & Time -->
+      <div class="form-section">
+        <div class="form-section-label">Date &amp; Time</div>
+        <div class="form-row">
+          <!-- Date Block -->
+          <div class="input-block date-block" :class="{ 'has-field-error': hasSubmitted && validationState.errors.date }">
+            <label>Date <span class="req">*</span></label>
+            <div class="input-wrapper">
+              <input type="date" v-model="form.date" class="classic-input clean-date" :disabled="isSaving" />
+            </div>
+            <span class="field-error" v-if="hasSubmitted && validationState.errors.date">{{ validationState.errors.date }}</span>
           </div>
-        </div>
-        
-        <div class="or-separator">OR</div>
-        
-        <div class="input-block flex-1" :class="{ 'has-field-error': hasSubmitted && validationState.errors.task }">
-          <label>Select Master Task</label>
-          <div class="select-with-btn">
-            <div class="input-wrapper select-wrapper flex-full">
-              <!-- Using task.name as value binds naturally with the generic Task validation logic -->
-              <select v-model="form.taskSelect" class="classic-input" :disabled="isSaving">
-                <option value="">-- Choose Assigned Module --</option>
-                <option v-for="task in taskTypesList" :key="task.id" :value="task.name">{{ task.name }}</option>
+
+          <!-- Start Time -->
+          <div class="input-block time-block" :class="{ 'has-field-error': hasSubmitted && validationState.errors.time }">
+            <label>Start Time <span class="req">*</span></label>
+            <div class="time-selectors">
+              <select v-model="form.startH" class="time-part" :disabled="isSaving">
+                <option v-for="h in hours" :key="'sh'+h" :value="h">{{ h }}</option>
+              </select>
+              <span class="colon">:</span>
+              <input type="text" inputmode="numeric" maxlength="2" placeholder="00" :value="form.startM" @input="cleanMinute('startM', $event)" class="time-part min-input" :disabled="isSaving" @blur="padMinute('startM')" autocomplete="off" />
+              <select v-model="form.startA" class="time-ampm" :disabled="isSaving">
+                <option v-for="a in ampm" :key="'sa'+a" :value="a">{{ a }}</option>
               </select>
             </div>
-            
-            <button type="button" @click="openManageTasks" class="btn-manage-circle" title="Manage Master Data" :disabled="isSaving">
-               <svg viewBox="0 0 24 24" fill="none" class="add-icon"><path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </button>
+          </div>
+
+          <!-- End Time -->
+          <div class="input-block time-block" :class="{ 'has-field-error': hasSubmitted && validationState.errors.time }">
+            <label>End Time <span class="req">*</span></label>
+            <div class="time-selectors">
+              <select v-model="form.endH" class="time-part" :disabled="isSaving">
+                <option v-for="h in hours" :key="'eh'+h" :value="h">{{ h }}</option>
+              </select>
+              <span class="colon">:</span>
+              <input type="text" inputmode="numeric" maxlength="2" placeholder="00" :value="form.endM" @input="cleanMinute('endM', $event)" class="time-part min-input" :disabled="isSaving" @blur="padMinute('endM')" autocomplete="off" />
+              <select v-model="form.endA" class="time-ampm" :disabled="isSaving">
+                <option v-for="a in ampm" :key="'ea'+a" :value="a">{{ a }}</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Last Task Checkbox -->
+          <div class="input-block checkbox-block">
+            <label class="checkbox-label" :class="{ 'disabled-text': isSaving }">
+              <input type="checkbox" v-model="form.isLastTask" :disabled="isSaving" class="erp-checkbox" />
+              Last task of the day?
+            </label>
+          </div>
+        </div>
+        <div class="row-error" v-if="hasSubmitted && validationState.errors.time">{{ validationState.errors.time }}</div>
+      </div>
+
+      <!-- Section: Task Category -->
+      <div class="form-section">
+        <div class="form-section-label">Task Category</div>
+        <div class="form-row align-center task-row">
+          <div class="input-block flex-1" :class="{ 'has-field-error': hasSubmitted && validationState.errors.task }">
+            <label>Custom Entry</label>
+            <div class="input-wrapper">
+              <input type="text" v-model="form.taskText" placeholder="Type a custom task name..." class="classic-input" :disabled="isSaving" />
+            </div>
+          </div>
+
+          <div class="or-separator">OR</div>
+
+          <div class="input-block flex-1" :class="{ 'has-field-error': hasSubmitted && validationState.errors.task }">
+            <label>Select from Master List</label>
+            <div class="select-with-btn">
+              <div class="input-wrapper select-wrapper flex-full">
+                <select v-model="form.taskSelect" class="classic-input" :disabled="isSaving">
+                  <option value="">— Choose Assigned Module —</option>
+                  <option v-for="task in taskTypesList" :key="task.id" :value="task.name">{{ task.name }}</option>
+                </select>
+              </div>
+              <button type="button" @click="openManageTasks" class="btn-manage-circle" title="Manage task categories" :disabled="isSaving">
+                <svg viewBox="0 0 24 24" fill="none" class="add-icon"><path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="row-error" v-if="hasSubmitted && validationState.errors.task">{{ validationState.errors.task }}</div>
+      </div>
+
+      <!-- Section: Description -->
+      <div class="form-section">
+        <div class="form-section-label">Deliverable Description</div>
+        <div class="form-row">
+          <div class="input-block flex-full" :class="{ 'has-field-error': hasSubmitted && validationState.errors.description }">
+            <label>Description <span class="req">*</span></label>
+            <div class="input-wrapper">
+              <textarea v-model="form.description" rows="4" placeholder="Describe the work accomplished during this session..." class="classic-input" :disabled="isSaving"></textarea>
+            </div>
+            <span class="field-error" v-if="hasSubmitted && validationState.errors.description">{{ validationState.errors.description }}</span>
           </div>
         </div>
       </div>
-      <div class="row-error" v-if="hasSubmitted && validationState.errors.task">{{ validationState.errors.task }}</div>
 
-      <!-- Row 3: Description -->
-      <div class="form-row mt-12">
-        <div class="input-block flex-full" :class="{ 'has-field-error': hasSubmitted && validationState.errors.description }">
-          <label>Description <span class="req">*</span></label>
-          <div class="input-wrapper">
-            <textarea v-model="form.description" rows="3" placeholder="Provide detailed deliverables accomplished..." class="classic-input" :disabled="isSaving"></textarea>
-          </div>
-          <span class="field-error" v-if="hasSubmitted && validationState.errors.description">{{ validationState.errors.description }}</span>
+      <!-- Panel Footer / Submit -->
+      <div class="form-panel-footer">
+        <span class="footer-policy">Timesheet Integrity Monitored &bull; Institutional Policy 4.2</span>
+        <div class="form-actions">
+          <button v-if="isEditMode" type="button" @click="router.push('/app/history')" class="btn-cancel" :disabled="isSaving">Cancel</button>
+          <button type="submit" class="btn-primary-action" :disabled="isSaving">
+            <span v-if="isSaving" class="btn-flex"><span class="loader"></span> Saving...</span>
+            <span v-else>{{ isEditMode ? 'Update Entry' : 'Save Entry' }}</span>
+          </button>
         </div>
-      </div>
-
-      <!-- Submit Footer -->
-      <div class="form-actions">
-        <!-- Optional cancel button for edits -->
-        <button v-if="isEditMode" type="button" @click="router.push('/app/history')" class="cancel-link" :disabled="isSaving">Cancel</button>
-
-        <button type="submit" class="blue-btn" :disabled="isSaving">
-          <span v-if="isSaving" class="btn-flex"><span class="loader"></span> Saving...</span>
-          <span v-else>{{ isEditMode ? 'UPDATE ENTRY' : 'SAVE ENTRY' }}</span>
-        </button>
       </div>
 
     </form>
-    
-    <div class="footer-msg">
-      Timesheet Integrity Monitored &bull; Institutional Policy 4.2
-    </div>
 
     <!-- TASK MANAGEMENT MODAL -->
     <div v-if="showTaskModal" class="modal-overlay" @mousedown.self="showTaskModal = false">
       <div class="modal-card">
-         <div class="modal-header">
-           <h3>Manage Master Categories</h3>
-           <button @click="showTaskModal = false" class="btn-close-modal">✕</button>
-         </div>
-         
-         <div v-if="taskManageError" class="modal-error">{{ taskManageError }}</div>
-         
-         <div class="add-task-form">
-            <input type="text" v-model="newTaskName" placeholder="New category name..." @keyup.enter="submitNewTask" :disabled="isManagingTasks" class="classic-input" />
-            <button @click="submitNewTask" class="blue-btn small-btn" :disabled="isManagingTasks || !newTaskName.trim()">
-              <span v-if="isManagingTasks" class="loader small-loader"></span>
-              <span v-else>ADD</span>
-            </button>
-         </div>
-         
-         <div class="task-list">
-            <div v-for="task in taskTypesList" :key="task.id" class="task-item">
-               <span class="task-name">{{ task.name }}</span>
-               <button @click="removeTask(task.id, task.name)" class="btn-delete-task" title="Remove Category" :disabled="isManagingTasks">Delete</button>
-            </div>
-            <div v-if="taskTypesList.length === 0" class="empty-state">No master tasks found.</div>
-         </div>
-         
-         <div class="modal-actions-footer">
-            <button @click="showTaskModal = false" class="cancel-btn">Close</button>
-         </div>
+        <div class="modal-header">
+          <h3>Manage Task Categories</h3>
+          <button @click="showTaskModal = false" class="btn-close-modal">✕</button>
+        </div>
+        <div v-if="taskManageError" class="modal-error">{{ taskManageError }}</div>
+        <div class="add-task-form">
+          <input type="text" v-model="newTaskName" placeholder="New category name..." @keyup.enter="submitNewTask" :disabled="isManagingTasks" class="classic-input" />
+          <button @click="submitNewTask" class="blue-btn small-btn" :disabled="isManagingTasks || !newTaskName.trim()">
+            <span v-if="isManagingTasks" class="loader small-loader"></span>
+            <span v-else>ADD</span>
+          </button>
+        </div>
+        <div class="task-list">
+          <div v-for="task in taskTypesList" :key="task.id" class="task-item">
+            <span class="task-name">{{ task.name }}</span>
+            <button @click="removeTask(task.id, task.name)" class="btn-delete-task" title="Remove Category" :disabled="isManagingTasks">Delete</button>
+          </div>
+          <div v-if="taskTypesList.length === 0" class="empty-state">No master tasks defined.</div>
+        </div>
+        <div class="modal-actions-footer">
+          <button @click="showTaskModal = false" class="cancel-btn">Close</button>
+        </div>
       </div>
     </div>
-    
+
   </div>
 </template>
 
 <style scoped>
+/* ── Panel Shell ─────────────────────────────────────────────────────────── */
 .erp-add-view {
-  font-family: Arial, Helvetica, sans-serif;
-  background-color: #ffffff;
-  min-height: calc(100vh - 130px);
-  position: relative;
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
+
+/* ── Panel Header ─────────────────────────────────────────────────────────── */
+.panel-header {
+  padding: 18px 28px;
+  border-bottom: 1px solid var(--border-light);
+  background-color: #fafbfc;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.panel-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin: 0 0 4px;
+}
+
+.panel-note {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin: 0;
+  max-width: 600px;
+  line-height: 1.5;
+}
+
+.edit-mode-badge {
+  background-color: #fef3c7;
+  color: #92400e;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 12px;
+  border: 1px solid #fde68a;
+  white-space: nowrap;
+  margin-top: 2px;
+}
+
+/* ── Form Feedback Banners ───────────────────────────────────────────────── */
+.form-feedback {
+  margin: 16px 28px 0;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.fb-icon { font-size: 1.1rem; font-weight: bold; margin-top: -1px; }
+.form-feedback p { margin: 3px 0 0; font-weight: normal; }
+.form-feedback.error { color: #991b1b; border: 1px solid #fecaca; background-color: #fef2f2; }
+.form-feedback.success { color: #166534; border: 1px solid #bbf7d0; background-color: #f0fdf4; }
+
+/* ── Form Body ───────────────────────────────────────────────────────────── */
+.erp-form {
+  padding: 0;
+  flex: 1;
+}
+
+.form-section {
+  padding: 20px 28px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.form-section-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+}
+
+.form-row {
+  display: flex;
+  gap: 20px;
+  align-items: stretch;
+}
+
+.form-row.task-row { margin-bottom: 4px; }
+.form-row.align-center { align-items: center; }
+
+/* ── Input Blocks ────────────────────────────────────────────────────────── */
+.input-block {
+  display: flex;
+  flex-direction: column;
+}
+
+.flex-1 { flex: 1; }
+.flex-full { width: 100%; }
+.date-block { width: 200px; flex-shrink: 0; }
+.time-block { width: 160px; flex-shrink: 0; }
+.checkbox-block {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  padding-bottom: 2px;
+}
+
+label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 6px;
+  display: inline-block;
+}
+
+.req { color: #dc2626; margin-left: 2px; }
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  font-size: 0.82rem;
+  color: #475569;
+  cursor: pointer;
+}
+
+.erp-checkbox {
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.disabled-text { color: var(--text-muted); cursor: not-allowed; }
+
+.or-separator {
+  font-weight: 700;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  padding-top: 20px;
+  flex-shrink: 0;
+}
+
+/* ── Inputs ──────────────────────────────────────────────────────────────── */
+.input-wrapper {
+  position: relative;
+  display: flex;
+  background-color: #fff;
+}
+
+.select-wrapper::after {
+  content: '▼';
+  font-size: 0.55rem;
+  color: #888;
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.classic-input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: 0.84rem;
+  font-family: inherit;
+  color: var(--text-main);
+  background-color: transparent;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.classic-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+}
+
+textarea.classic-input {
+  resize: vertical;
+  min-height: 90px;
+  line-height: 1.5;
+}
+
+.classic-input:disabled {
+  background-color: #f8fafc;
+  color: var(--text-muted);
+  cursor: not-allowed;
+  border-color: var(--border-light);
+}
+
+.clean-date::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.5;
+}
+.clean-date::-webkit-calendar-picker-indicator:hover { opacity: 0.9; }
+
+/* 12-HR Time Selectors */
+.time-selectors {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background-color: #fff;
+  height: 36px;
+  overflow: hidden;
+}
+.time-selectors:focus-within {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+}
+.time-part {
+  border: none;
+  background: transparent;
+  flex: 1;
+  text-align: center;
+  font-size: 0.84rem;
+  font-family: inherit;
+  color: var(--text-main);
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 0 3px;
+  cursor: pointer;
+  text-align-last: center;
+}
+.min-input::-webkit-outer-spin-button,
+.min-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.min-input { -moz-appearance: textfield; }
+.time-part:focus { outline: none; }
+.time-ampm {
+  border: none;
+  background: #f1f5f9;
+  border-left: 1px solid var(--border-color);
+  height: 100%;
+  font-weight: 700;
+  font-size: 0.78rem;
+  color: #334155;
+  width: 46px;
+  text-align: center;
+  text-align-last: center;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+.time-ampm:focus { outline: none; }
+.colon { font-weight: 700; color: #94a3b8; font-size: 0.9rem; }
+
+/* Error States */
+.has-field-error .classic-input,
+.has-field-error .time-selectors { border-color: #dc2626; }
+.has-field-error .time-ampm { background-color: #fee2e2; border-left-color: #fca5a5; }
+
+.field-error {
+  color: #dc2626;
+  font-size: 0.72rem;
+  margin-top: 4px;
+  font-weight: 500;
+  display: block;
+}
+.row-error {
+  color: #dc2626;
+  font-size: 0.78rem;
+  margin-top: 6px;
+  font-weight: 600;
+}
+
+/* Task Manage Button */
+.select-with-btn { display: flex; gap: 10px; align-items: center; width: 100%; }
+.select-wrapper { flex: 1; }
+
+.btn-manage-circle {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md);
+  background-color: #475569;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.15s;
+  color: white;
+}
+.btn-manage-circle:hover { background-color: #334155; }
+.btn-manage-circle:disabled { background-color: #cbd5e1; cursor: not-allowed; }
+.add-icon { width: 16px; height: 16px; color: white; }
+
+/* ── Panel Footer ────────────────────────────────────────────────────────── */
+.form-panel-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 28px;
+  background-color: #fafbfc;
+  border-top: 1px solid var(--border-light);
+}
+
+.footer-policy {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.form-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.btn-cancel {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 8px 18px;
+  border-radius: var(--radius-md);
+  transition: all 0.15s;
+}
+.btn-cancel:hover { border-color: #94a3b8; color: var(--text-main); }
+
+.btn-primary-action {
+  background-color: var(--primary-color);
+  color: #ffffff;
+  border: none;
+  padding: 9px 28px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background-color 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.btn-primary-action:hover:not(:disabled) { background-color: var(--primary-hover); }
+.btn-primary-action:disabled { background-color: #94a3b8; cursor: not-allowed; }
+
+/* Loader */
+.btn-flex { display: flex; align-items: center; gap: 8px; }
+.loader {
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  width: 14px; height: 14px;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+}
+.small-loader {
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  width: 12px; height: 12px;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Task Modal ──────────────────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+.modal-card {
+  background: white;
+  border-radius: 10px;
+  width: 480px;
+  max-width: 90vw;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+  overflow: hidden;
+}
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-light);
+  background: #fafbfc;
+}
+.modal-header h3 { font-size: 0.9375rem; font-weight: 700; margin: 0; color: var(--text-main); }
+.btn-close-modal {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px 6px;
+}
+.btn-close-modal:hover { color: var(--text-main); }
+
+.modal-error {
+  margin: 12px 20px 0;
+  padding: 10px 14px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-md);
+  color: #991b1b;
+  font-size: 0.82rem;
+}
+
+.add-task-form {
+  display: flex;
+  gap: 10px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-light);
+}
+.add-task-form .classic-input { flex: 1; }
+
+.blue-btn {
+  background-color: var(--primary-color);
+  color: #fff;
+  border: none;
+  padding: 8px 18px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+.blue-btn:hover:not(:disabled) { background-color: var(--primary-hover); }
+.blue-btn:disabled { background-color: #94a3b8; cursor: not-allowed; }
+.small-btn { padding: 7px 14px; white-space: nowrap; }
+
+.task-list {
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+.task-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 20px;
+  border-bottom: 1px solid var(--border-light);
+}
+.task-item:last-child { border-bottom: none; }
+.task-name { font-size: 0.84rem; color: var(--text-main); font-weight: 500; }
+.btn-delete-task {
+  background: none;
+  border: 1px solid #fca5a5;
+  color: #dc2626;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-delete-task:hover:not(:disabled) { background: #fee2e2; }
+.btn-delete-task:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.empty-state { padding: 24px 20px; text-align: center; color: var(--text-muted); font-size: 0.84rem; }
+
+.modal-actions-footer {
+  padding: 12px 20px;
+  border-top: 1px solid var(--border-light);
+  display: flex;
+  justify-content: flex-end;
+}
+.cancel-btn {
+  background: none;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  font-weight: 600;
+  padding: 7px 18px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+.cancel-btn:hover { border-color: #94a3b8; color: var(--text-main); }
+</style>
+
 
 .header-strip {
   background-color: #ffb833;
