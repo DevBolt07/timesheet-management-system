@@ -21,6 +21,14 @@
   --header-h: 56px;
   --context-h: 40px;
   --content-pad: 28px;
+
+  /* Warm accent — institutional amber/orange for page panel headers */
+  --accent-warm: #f59e0b;
+  --accent-warm-dark: #d97706;
+  --accent-warm-text: #ffffff;
+  --accent-warm-light: #fffbeb;
+  --accent-warm-border: #fde68a;
+  --accent-warm-muted: rgba(245, 158, 11, 0.12);
 }
 
 * {

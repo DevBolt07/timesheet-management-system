@@ -167,7 +167,7 @@ const pageInfo = computed(() => pageMap[route.path] || { title: 'Workspace', sub
 .logo-box {
   width: 28px;
   height: 28px;
-  background-color: var(--primary-color);
+  background-color: var(--accent-warm);
   border-radius: 6px;
   display: flex;
   align-items: center;

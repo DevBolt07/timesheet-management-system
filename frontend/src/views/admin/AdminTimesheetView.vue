@@ -149,10 +149,11 @@ const statusClass = (s) => s === 'APPROVED' ? 'st-approved' : s === 'REJECTED' ?
 
 <style scoped>
 .admin-oversight { display: flex; flex-direction: column; gap: 16px; }
-.page-header h2 { font-size: 1.25rem; font-weight: 700; color: #1e293b; margin: 0 0 4px; }
-.page-header p  { font-size: 0.875rem; color: #64748b; margin: 0; }
+.page-header { padding: 14px 20px; background: var(--accent-warm); border-radius: var(--radius-lg) var(--radius-lg) 0 0; margin-bottom: 0; }
+.page-header h2 { font-size: 1.0625rem; font-weight: 700; color: #fff; margin: 0 0 2px; letter-spacing: -0.01em; }
+.page-header p  { font-size: 0.78rem; color: rgba(255,255,255,0.85); margin: 0; }
 
-.filter-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 16px; }
+.filter-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0 0 var(--radius-lg) var(--radius-lg); padding: 14px 16px; border-top: none; }
 .search-box { position: relative; flex: 1; min-width: 200px; }
 .si { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: #94a3b8; }
 .fi { width: 100%; padding: 7px 10px 7px 32px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.85rem; box-sizing: border-box; outline: none; }

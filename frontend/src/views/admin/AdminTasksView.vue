@@ -138,8 +138,9 @@ const deleteTask = async (task) => {
 
 <style scoped>
 .admin-tasks { display: flex; flex-direction: column; gap: 20px; }
-.page-header h2 { font-size: 1.25rem; font-weight: 700; color: #1e293b; margin: 0 0 4px; }
-.page-header p  { font-size: 0.875rem; color: #64748b; margin: 0; }
+.page-header { padding: 14px 20px; background: var(--accent-warm); border-radius: var(--radius-lg) var(--radius-lg) 0 0; margin-bottom: 0; }
+.page-header h2 { font-size: 1.0625rem; font-weight: 700; color: #fff; margin: 0 0 2px; letter-spacing: -0.01em; }
+.page-header p  { font-size: 0.78rem; color: rgba(255,255,255,0.85); margin: 0; }
 
 .add-task-panel { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 18px 20px; }
 .add-task-panel h4 { font-size: 0.9rem; font-weight: 600; color: #1e293b; margin: 0 0 12px; }

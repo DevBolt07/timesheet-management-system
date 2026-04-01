@@ -329,35 +329,37 @@ const editEntry = (id) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 24px;
-  border-bottom: 1px solid #e2e8f0;
+  padding: 16px 24px;
+  background: var(--accent-warm);
+  border-bottom: none;
 }
 
 .toolbar h2 {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #1e293b;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: var(--accent-warm-text);
   margin: 0;
+  letter-spacing: -0.01em;
 }
 
 .blue-btn {
-  background-color: #1d4ed8;
+  background-color: var(--primary-color);
   color: #ffffff;
   border: none;
   padding: 8px 16px;
-  font-size: 0.85rem;
+  font-size: 0.84rem;
   font-weight: 600;
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   cursor: pointer;
   transition: all 0.2s;
 }
-.blue-btn:hover { background-color: #1e3a8a; }
+.blue-btn:hover { background-color: var(--primary-hover); }
 .blue-btn.outline {
-  background-color: #eff6ff;
-  color: #1d4ed8;
-  border: 1px solid #bfdbfe;
+  background-color: rgba(255,255,255,0.18);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.45);
 }
-.blue-btn.outline:hover { background-color: #dbeafe; }
+.blue-btn.outline:hover { background-color: rgba(255,255,255,0.28); }
 
 /* HOD Staff Summary */
 .staff-summary-bar {

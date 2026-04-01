@@ -141,36 +141,37 @@ const formatDate = (dateStr) => {
   justify-content: space-between;
   align-items: center;
   padding: 16px 24px;
-  background-color: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--accent-warm);
   border-radius: 8px;
   margin-bottom: 24px;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
 }
 
 .toolbar h2 {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #1e293b;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: var(--accent-warm-text);
   margin: 0;
+  letter-spacing: -0.01em;
 }
 
 .stat-badge {
-  background-color: #fef3c7;
-  color: #92400e;
-  padding: 6px 16px;
+  background-color: rgba(255, 255, 255, 0.22);
+  color: #fff;
+  padding: 5px 14px;
   border-radius: 20px;
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   display: flex;
   align-items: center;
   gap: 8px;
+  border: 1px solid rgba(255,255,255,0.35);
 }
 .stat-num {
-  background-color: #d97706;
-  color: white;
+  background-color: rgba(255,255,255,0.35);
+  color: var(--accent-warm-text);
   padding: 2px 8px;
   border-radius: 10px;
+  font-weight: 700;
 }
 
 .state-container {
