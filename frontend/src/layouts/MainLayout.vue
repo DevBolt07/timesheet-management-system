@@ -1,17 +1,22 @@
 <script setup>
+import { computed } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
-
 import { useAuthStore } from '@/stores/authStore'
 import { storeToRefs } from 'pinia'
 
 const route = useRoute()
 const authStore = useAuthStore()
 const { currentUser, isManager, isStaff } = storeToRefs(authStore)
+const isAdmin = computed(() => currentUser.value?.role === 'ADMIN')
 
 const breadcrumbMap = {
   '/app/history': 'Timesheet Logs',
   '/app/log-time': 'Log New Timesheet',
-  '/app/review': 'Review Pending Approvals'
+  '/app/review': 'Review Pending Approvals',
+  '/app/admin': 'Admin Dashboard',
+  '/app/admin/oversight': 'Timesheet Oversight',
+  '/app/admin/users': 'User Directory',
+  '/app/admin/tasks': 'Task Master Control',
 }
 
 const getBreadcrumb = () => {
@@ -73,6 +78,29 @@ const getBreadcrumb = () => {
             <RouterLink to="/app/history" class="nav-item" active-class="nav-active">
               <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
               Department Logs
+            </RouterLink>
+          </nav>
+        </template>
+
+        <!-- ADMIN navigation -->
+        <template v-if="isAdmin">
+          <p class="nav-heading">Administration</p>
+          <nav class="nav-menu">
+            <RouterLink to="/app/admin" class="nav-item" active-class="nav-active" exact>
+              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+              Dashboard
+            </RouterLink>
+            <RouterLink to="/app/admin/oversight" class="nav-item" active-class="nav-active">
+              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              Timesheet Oversight
+            </RouterLink>
+            <RouterLink to="/app/admin/users" class="nav-item" active-class="nav-active">
+              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              User Directory
+            </RouterLink>
+            <RouterLink to="/app/admin/tasks" class="nav-item" active-class="nav-active">
+              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+              Task Master
             </RouterLink>
           </nav>
         </template>

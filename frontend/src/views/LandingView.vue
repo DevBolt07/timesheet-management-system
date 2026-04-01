@@ -17,7 +17,9 @@ const handleLogin = async () => {
   
   try {
      await authStore.loginAsDemo(form.value.username, form.value.password)
-     router.push('/app')
+     // Navigate directly to the role-specific default workspace.
+     // homeRoute is a computed in authStore: ADMIN→/app/admin, HOD→/app/review, STAFF→/app/history
+     router.push(authStore.homeRoute)
   } catch (e) {
      loginError.value = e.message
      console.error(e)
